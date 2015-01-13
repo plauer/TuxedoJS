@@ -19,30 +19,27 @@ var removePassedInKeys = function (props, currentState) {
     for (var key in inputProps) {
       var currentKey;
       if (keys.length) {
-        console.log('keys have length')
-        var jsonString = "";
+        var keyChain = "currentState";
         for (var i = 0; i < keys.length; i++) {
-          jsonString += "['" + keys[i] + "']";
+          keyChain += "['" + keys[i] + "']";
         }
-        // console.log(eval("currentState" + jsonString + "['" + key + "']"))
-        keyChain = eval("currentState" + jsonString + "['" + key + "']");
-        currentKey = keyChain;
+        currentKey = eval(keyChain + "['" + key + "']");
       } else {
-        console.log("ONLY 1 KEY, AND IT IS " + key)
         currentKey = currentState[key];
       }
-      console.log(currentKey)
+
       if (currentKey === undefined) {
         throw "Key " + key + " doesn't match any keys in the current state.";
       } else {
-        if (Object.prototype.toString.call(inputProps[key]) == "[object Object]") {
-          console.log('About to recurse...')
+        if (Object.prototype.toString.call(inputProps[key]) === "[object Object]") {
           keys.push(key);
           traverseProps(inputProps[key], keys);
+          keys.pop();
         } else {
           // keys = [];
           console.log('**************')
           console.log('DEEPEST KEY IS ' + key);
+          console.log(keyChain)
 
         }
       }
@@ -52,11 +49,40 @@ var removePassedInKeys = function (props, currentState) {
   traverseProps(props);
 };
 
+// var removePassedInKeys = function (props, currentState) {
+
+//   var traverse = function (inputProps, keyChain) {
+//     for (var key in inputProps) {
+//       // console.log("Key is " + key);
+//       // console.log(keyChain);
+//       if (currentState[key] === undefined) {
+//         throw "Key " + key + " was not found in current state";
+//       }
+//       else if (Object.prototype.toString.call(props[key]) === "[object Object]") {
+//         keyChain.push(key);
+//         traverse(inputProps[key], keyChain);
+//         keyChain.pop();
+//       } else {
+//         console.log("DEEPEST KEY IS " + key);
+//         keyChain.pop();
+//       }
+//     }
+//   };
+
+//   traverse(props, []);
+// };
+
 var currentProps = {
   'Pat': {
     'cat':false,
     'dog':{
       'Dog1':true
+    },
+    'squirrel':true,
+    'pigeon':{
+      'pigeon1':{
+        'fat':true
+      }
     }
   },
   'Dmitri': {
@@ -69,8 +95,12 @@ var currentProps = {
 
 var deleteProps = {
   'Pat':{
+        'pigeon':{
+      'pigeon1':{
+        'fat':true
+      }
+    },
     'cat':true,
-    // 'turtles': true,
     'dog':{
       'Dog1':true
     }
