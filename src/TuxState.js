@@ -1,8 +1,8 @@
 'use strict';
 
 var assign = require('object-assign');
-var invariant = require('tux/src/TuxInvariant');
-var update = require('tux/React/update');
+var invariant = require('./TuxInvariant');
+var update = require('../React/update');
 
 var hasAllOuterKeysMatching = function (props, currentState) {
   for (var key in props) {
@@ -56,23 +56,6 @@ var hasAnyOuterKeysMatching = function (props, currentState) {
   return false;
 };
 
-var obj1 = {
-  'a':{
-    'b':{
-      'turtles':true
-    }
-  }
-};
-
-var obj2 = {
-  'a':{}
-
-};
-
-console.log(obj1);
-
-obj1 = assign({}, obj1, obj2);
-console.log(obj1)
 
 
 var stateConvenienceMethods = {
@@ -214,6 +197,43 @@ var stateConvenienceMethods = {
 
 };
 
+// OMIT
+var deleteProps = {
+  'Pat':{
+    'pigeon':true,
+    'cat':true,
+    'dog':{
+      'age':true
+    }
+  },
+  'Dmitri':true
+};
+console.log(stateConvenienceMethods.state);
+stateConvenienceMethods.omitState(deleteProps);
+// console.log(stateConvenienceMethods.state);
+
+
+//SUBTRACT
+// var propsToSubtract = {
+//   'Pat':{
+//     'cat':{
+//       'age':1
+//     },
+//     'dog':{
+//       'age':3
+//     }
+//   },
+//   'Dmitri':{
+//     'cat': {
+//       'age':2
+//     }
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.subtractState(propsToSubtract);
+
+
 //CONCAT TO FRONT
 // var propsToConcat = {
 //   'Gunnari': {
@@ -327,25 +347,6 @@ var stateConvenienceMethods = {
 // console.log(stateConvenienceMethods.state);
 // stateConvenienceMethods.multiplyState(propsToMultiply);
 
-//SUBTRACT
-// var propsToSubtract = {
-//   'Pat':{
-//     'cat':{
-//       'age':1
-//     },
-//     'dog':{
-//       'age':3
-//     }
-//   },
-//   'Dmitri':{
-//     'cat': {
-//       'age':2
-//     }
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.subtractState(propsToSubtract);
 
 //ADD
 // var propsToAdd = {
@@ -365,24 +366,6 @@ var stateConvenienceMethods = {
 // stateConvenienceMethods.addState(propsToAdd);
 
 
-// OMIT
-// var deleteProps = {
-//   'Pat':{
-//     'pigeon':{
-//       'pigeon1':{
-//         'fat':true
-//       }
-//     },
-//     'cat':true,
-//     'dog':{
-//       'Dog1':true
-//     }
-//   },
-//   'Dmitri':true
-// };
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.omitState(deleteProps);
-// console.log(stateConvenienceMethods.state);
 
 // // EXTEND
 // var newObj = {
