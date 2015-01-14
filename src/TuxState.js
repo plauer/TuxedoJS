@@ -12,7 +12,7 @@ var hasAllOuterKeysMatching = function (props, currentState) {
   return true;
 };
 
-var removePassedInKeys = function (props, currentState) {
+var findDeepestKeys = function (props, currentState) {
   var traverseProps = function (inputProps, keys) {
     keys = keys ? keys : [];
     var keyChain;
@@ -43,33 +43,39 @@ var removePassedInKeys = function (props, currentState) {
   return currentState;
 };
 
-// var addToKeys = function (props, currentState) {
-//   var traverseProps = function (inputProps, keys) {
-//     keys = keys ? keys : [];
-//     var keyChain;
+var findDeepKeysAndApply = function (props, currentState, callback) {
+  var traverseProps = function (inputProps, keys) {
+    keys = keys ? keys : [];
+    var keyChain;
 
-//     for (var key in inputProps) {
-//       var currentKey;
+    for (var key in inputProps) {
+      var currentKey;
 
-//       var keyChain = currentState;
-//       if (keys.length) {
-//         for (var i = 0; i < keys.length; i++) {
-//           keyChain = keyChain[keys[i]];
-//         }
-//       }
+      var keyChain = currentState;
+      var newState = props;
+      if (keys.length) {
+        for (var i = 0; i < keys.length; i++) {
+          keyChain =  keyChain[keys[i]];
+          newState = newState[keys[i]];
+        }
+      }
 
-//       invariant(keyChain.hasOwnProperty(key), 'The "%s" property is not defined in the current state.', key);
-//       currentKey = keyChain[key];
+      invariant(keyChain.hasOwnProperty(key), 'The "%s" property is not defined in the current state.', key);
+      currentKey = keyChain[key];
 
-//       if (Object.prototype.toString.call(inputProps[key]) === "[object Object]") {
-//         keys.push(key);
-//         traverseProps(inputProps[key], keys);
-//         keys.pop();
-//       } else {
-
-//       }
-//     }
-// }
+      if (Object.prototype.toString.call(inputProps[key]) === "[object Object]") {
+        keys.push(key);
+        traverseProps(inputProps[key], keys);
+        keys.pop();
+      } else {
+        //CALL INVARIANT FOR IF KEY IS NOT A NUM
+        keyChain[key] = callback(newState[key], keyChain[key]);
+      }
+    }
+  };
+  traverseProps(props);
+  return currentState;
+};
 
 var hasAnyOuterKeysMatching = function (props, currentState) {
   for (var key in props) {
@@ -80,25 +86,31 @@ var hasAnyOuterKeysMatching = function (props, currentState) {
   return false;
 };
 
+
+
 var stateConvenienceMethods = {
   state: {
     'Pat': {
-      'cat':false,
+      'cat': {
+        'name':'Mr. Bigglesworth',
+        'age':10
+      },
       'dog':{
-        'Dog1':true
+        'age':10
       },
       'squirrel':true,
       'pigeon':{
-        'pigeon1':{
-          'fat':true
-        }
+        'fat':true
       }
     },
     'Dmitri': {
       'cat':{
-        'Cat1': true,
-        'Cat2':true
+        'age': 12,
+        'name':'Spencer'
       }
+    },
+    'Gunnari': {
+      'turtles':['Pat', 'Spencer']
     }
   },
 
@@ -106,8 +118,105 @@ var stateConvenienceMethods = {
     this.state = assign(this.state, newState);
   },
 
-  //keep overwirting keys with asigned versions of those keys + whatever keys you're modifying
-  // currentState: {this.state},
+  addState: function (propsToAdd) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToAdd, state, function(newProps, originalProps) {
+      return originalProps + newProps;
+    }));
+  },
+
+  subtractState: function(propsToSubtract) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToSubtract, state, function(newProps, originalProps) {
+      return originalProps - newProps;
+    }));
+  },
+
+  multiplyState: function (propsToMultiply) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToMultiply, state, function(newProps, originalProps) {
+      return originalProps * newProps;
+    }));
+  },
+
+  divideState: function (propsToDivide) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToDivide, state, function(newProps, originalProps) {
+      return originalProps / newProps;
+    }));
+  },
+
+  omitState: function (propsToDelete) {
+    var state = assign({}, this.state);
+    console.log(removePassedInKeys(propsToDelete, state));
+    // this.setState(removePassedInKeys(propsToDelete, state));
+  },
+
+  extendState: function (newProps) {
+    var newState = assign({}, this.state);
+    if (hasAnyOuterKeysMatching(newProps, this.state)) {
+      this.setState(assign(this.state, newProps));
+    } else {
+      throw "Passed in keys don't match any keys in the current state";
+    }
+  },
+
+  pushState: function (propsToPush) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToPush, state, function(newProps, originalProps) {
+      originalProps.push(newProps);
+      return originalProps;
+    }));
+  },
+
+  popState: function (propsToPop) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToPop, state, function(newProps, originalProps) {
+      originalProps.pop();
+      return originalProps;
+    }));
+  },
+
+  unshiftState: function(propsToUnshift) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToUnshift, state, function(newProps, originalProps) {
+      originalProps.unshift(newProps);
+      return originalProps;
+    }));
+  },
+
+  shiftState: function(propsToShift) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToShift, state, function(newProps, originalProps) {
+      originalProps.shift();
+      return originalProps;
+    }));
+  },
+
+  spliceState: function(propsToSplice) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToSplice, state, function(newProps, originalProps) {
+      //some splice logic here
+      return originalProps;
+    }));
+  },
+
+  concatToEndOfState: function(propsToConcat) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToConcat, state, function(newProps, originalProps) {
+      originalProps = originalProps.concat(newProps);
+      return originalProps;
+    }));
+  },
+
+  concatToFrontOfState: function(propsToConcat) {
+    var state = assign({}, this.state);
+    console.log(findDeepKeysAndApply(propsToConcat, state, function(newProps, originalProps) {
+      originalProps = newProps.concat(originalProps);
+      return originalProps;
+    }));
+  },
+
 
   resetState : function () {
     var newState = assign({}, this.state);
@@ -115,73 +224,176 @@ var stateConvenienceMethods = {
     // this.currentState = this.getInitialState;
   },
 
-  addState: function (newProps) {
-    var state = assign({}, this.state);
-    var addToKeys = function (object, keyToAddTo) {
-      return
-    }
-  },
-
-  omitState: function (propsToDelete) {
-    var state = assign({}, this.state);
-
-    console.log(removePassedInKeys(propsToDelete, state));
-    // this.setState(removePassedInKeys(propsToDelete, state));
-  },
-
-  //deepSearch ... in mutableRenderMixin
-    //iterate through each key
-    //if any key is an object, recurse through again
-
-  extendState: function (newProps) {
-    var newState = assign({}, this.state);
-    if (hasAnyOuterKeysMatching(newProps, this.state)) {
-      this.setState(assign(this.state, newProps));
-    } else {
-      throw "Passed in keys don't match any keys in the current state"
-    }
-  }
-
 };
 
-var currentProps = {
-  'Pat': {
-    'cat':false,
-    'dog':{
-      'Dog1':true
-    },
-    'squirrel':true,
-    'pigeon':{
-      'pigeon1':{
-        'fat':true
-      }
-    }
-  },
-  'Dmitri': {
-    'cat':{
-      'Cat1': true,
-      'Cat2':true
-    }
+//CONCAT TO FRONT
+var propsToConcat = {
+  'Gunnari': {
+    'turtles':['Wilbert', 'Jane', 'Mufasa']
   }
 };
+
+console.log(stateConvenienceMethods.state);
+stateConvenienceMethods.concatToFrontOfState(propsToConcat);
+
+//CONCAT TO END
+// var propsToConcat = {
+//   'Gunnari': {
+//     'turtles':['Wilbert', 'Jane', 'Mufasa']
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.concatToEndOfState(propsToConcat);
+
+//SPLICE ... how are args passed in?
+// var propsToSplice = {
+//   'Gunnari': {
+//     'turtles':true
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.shiftState(propsToShift);
+
+//SHIFT
+// var propsToShift = {
+//   'Gunnari': {
+//     'turtles':true
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.shiftState(propsToShift);
+
+//UNSHIFT
+// var propsToUnshift = {
+//   'Gunnari': {
+//     'turtles':'Dmitri'
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.unshiftState(propsToUnshift);
+
+
+//POP
+// var propsToPop = {
+//   'Gunnari': {
+//     'turtles':true
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.popState(propsToPop);
+
+//PUSH ...
+// var propsToPush = {
+//   'Gunnari': {
+//     'turtles':'Dmitri'
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.pushState(propsToPush);
+
+//DIVIDE
+// var propsToDivide = {
+//   'Pat':{
+//     'cat':{
+//       'age':2
+//     },
+//     'dog':{
+//       'age':30
+//     }
+//   },
+//   'Dmitri':{
+//     'cat': {
+//       'age':2
+//     }
+//   }
+// };
+
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.divideState(propsToDivide);
+
+//MULTIPLY
+// var propsToMultiply = {
+//   'Pat':{
+//     'cat':{
+//       'age':2
+//     },
+//     'dog':{
+//       'age':3
+//     }
+//   },
+//   'Dmitri':{
+//     'cat': {
+//       'age':2
+//     }
+//   }
+// };
+
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.multiplyState(propsToMultiply);
+
+//SUBTRACT
+// var propsToSubtract = {
+//   'Pat':{
+//     'cat':{
+//       'age':1
+//     },
+//     'dog':{
+//       'age':3
+//     }
+//   },
+//   'Dmitri':{
+//     'cat': {
+//       'age':2
+//     }
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.subtractState(propsToSubtract);
+
+//ADD
+// var propsToAdd = {
+//   'Pat':{
+//     'cat':{
+//       'age':3
+//     }
+//   },
+//   'Dmitri':{
+//     'cat': {
+//       'name':'-Gunnari'
+//     }
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.addState(propsToAdd);
+
 
 // OMIT
-var deleteProps = {
-  'Pat':{
-    'pigeon':{
-      'pigeon1':{
-        'fat':true
-      }
-    },
-    'cat':true,
-    'dog':{
-      'Dog1':true
-    }
-  },
-  'Dmitri':true
-};
-console.log(stateConvenienceMethods.state);
-stateConvenienceMethods.omitState(deleteProps);
+// var deleteProps = {
+//   'Pat':{
+//     'pigeon':{
+//       'pigeon1':{
+//         'fat':true
+//       }
+//     },
+//     'cat':true,
+//     'dog':{
+//       'Dog1':true
+//     }
+//   },
+//   'Dmitri':true
+// };
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.omitState(deleteProps);
 // console.log(stateConvenienceMethods.state);
 
 // // EXTEND
