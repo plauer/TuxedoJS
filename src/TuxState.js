@@ -1,7 +1,8 @@
 'use strict';
 
 var assign = require('object-assign');
-var invariant = require('./TuxInvariant');
+var invariant = require('tux/src/TuxInvariant');
+var update = require('tux/React/update');
 
 var hasAllOuterKeysMatching = function (props, currentState) {
   for (var key in props) {
@@ -12,37 +13,7 @@ var hasAllOuterKeysMatching = function (props, currentState) {
   return true;
 };
 
-var findDeepestKeys = function (props, currentState) {
-  var traverseProps = function (inputProps, keys) {
-    keys = keys ? keys : [];
-    var keyChain;
-
-    for (var key in inputProps) {
-      var currentKey;
-
-      var keyChain = currentState;
-      if (keys.length) {
-        for (var i = 0; i < keys.length; i++) {
-          keyChain = keyChain[keys[i]];
-        }
-      }
-
-      invariant(keyChain.hasOwnProperty(key), 'The "%s" property is not defined in the current state.', key);
-      currentKey = keyChain[key];
-
-      if (Object.prototype.toString.call(inputProps[key]) === "[object Object]") {
-        keys.push(key);
-        traverseProps(inputProps[key], keys);
-        keys.pop();
-      } else {
-        delete keyChain[key];
-      }
-    }
-  };
-  traverseProps(props);
-  return currentState;
-};
-
+//refactor callback to take 3 args
 var findDeepKeysAndApply = function (props, currentState, callback) {
   var traverseProps = function (inputProps, keys) {
     keys = keys ? keys : [];
@@ -68,7 +39,6 @@ var findDeepKeysAndApply = function (props, currentState, callback) {
         traverseProps(inputProps[key], keys);
         keys.pop();
       } else {
-        //CALL INVARIANT FOR IF KEY IS NOT A NUM
         keyChain[key] = callback(newState[key], keyChain[key]);
       }
     }
@@ -86,6 +56,23 @@ var hasAnyOuterKeysMatching = function (props, currentState) {
   return false;
 };
 
+var obj1 = {
+  'a':{
+    'b':{
+      'turtles':true
+    }
+  }
+};
+
+var obj2 = {
+  'a':{}
+
+};
+
+console.log(obj1);
+
+obj1 = assign({}, obj1, obj2);
+console.log(obj1)
 
 
 var stateConvenienceMethods = {
@@ -115,7 +102,7 @@ var stateConvenienceMethods = {
   },
 
   setState: function(newState) {
-    this.state = assign(this.state, newState);
+    this.state = assign({}, this.state, newState);
   },
 
   addState: function (propsToAdd) {
@@ -148,7 +135,9 @@ var stateConvenienceMethods = {
 
   omitState: function (propsToDelete) {
     var state = assign({}, this.state);
-    console.log(removePassedInKeys(propsToDelete, state));
+    console.log(findDeepKeysAndApply(propsToDelete, state, function(newProps, originalProps) {
+
+    }));
     // this.setState(removePassedInKeys(propsToDelete, state));
   },
 
@@ -157,7 +146,7 @@ var stateConvenienceMethods = {
     if (hasAnyOuterKeysMatching(newProps, this.state)) {
       this.setState(assign(this.state, newProps));
     } else {
-      throw "Passed in keys don't match any keys in the current state";
+      invariant(newProps, "Passed in keys don't match any keys in the current state");
     }
   },
 
@@ -221,20 +210,19 @@ var stateConvenienceMethods = {
   resetState : function () {
     var newState = assign({}, this.state);
     this.setState(newState);
-    // this.currentState = this.getInitialState;
   },
 
 };
 
 //CONCAT TO FRONT
-var propsToConcat = {
-  'Gunnari': {
-    'turtles':['Wilbert', 'Jane', 'Mufasa']
-  }
-};
+// var propsToConcat = {
+//   'Gunnari': {
+//     'turtles':['Wilbert', 'Jane', 'Mufasa']
+//   }
+// };
 
-console.log(stateConvenienceMethods.state);
-stateConvenienceMethods.concatToFrontOfState(propsToConcat);
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.concatToFrontOfState(propsToConcat);
 
 //CONCAT TO END
 // var propsToConcat = {
