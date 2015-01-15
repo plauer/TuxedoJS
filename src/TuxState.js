@@ -4,17 +4,9 @@ var assign = require('object-assign');
 var invariant = require('./TuxInvariant');
 var update = require('../React/update');
 
-var hasAllOuterKeysMatching = function (props, currentState) {
-  for (var key in props) {
-    if (!currentState[key]) {
-      return false;
-    }
-  }
-  return true;
-};
-
-//refactor callback to take 3 args
-var findDeepKeysAndApply = function (props, currentState, callback) {
+//only assign on the key that is being operated on ...
+//wherever you modify keys, make sure you assign
+var findDeepKeysAndApply = function (currentState, newProps, callback) {
   var traverseProps = function (inputProps, keys) {
     keys = keys ? keys : [];
     var keyChain;
@@ -22,12 +14,12 @@ var findDeepKeysAndApply = function (props, currentState, callback) {
     for (var key in inputProps) {
       var currentKey;
 
-      var keyChain = currentState;
-      var newState = props;
+      var keyChain = assign({}, currentState);
+      var newState = assign({}, newProps);
       if (keys.length) {
         for (var i = 0; i < keys.length; i++) {
-          keyChain =  keyChain[keys[i]];
-          newState = newState[keys[i]];
+          keyChain =  assign({}, keyChain[keys[i]]);
+          newState = assign({}, newState[keys[i]]);
         }
       }
 
@@ -36,27 +28,40 @@ var findDeepKeysAndApply = function (props, currentState, callback) {
 
       if (Object.prototype.toString.call(inputProps[key]) === "[object Object]") {
         keys.push(key);
-        traverseProps(inputProps[key], keys);
+        traverseProps(assign({}, inputProps[key]), keys);
         keys.pop();
       } else {
-        keyChain[key] = callback(newState[key], keyChain[key]);
+        callback(newState, keyChain, key);
       }
     }
   };
-  traverseProps(props);
+  traverseProps(newProps);
+  // currentState = 'hi'
+  // return assign({}, currentState);
   return currentState;
 };
 
-var hasAnyOuterKeysMatching = function (props, currentState) {
-  for (var key in props) {
+var hasAnyOuterKeysMatching = function (currentState, newProps) {
+  for (var key in newProps) {
     if (currentState[key]) {
       return true;
     }
   }
-  return false;
+  invariant(!newProps, "No keys match any keys in the current state.");
 };
 
+var invariantNumberCheck = function (input) {
+  if (typeof(input) !== "number") {
+    invariant(!input, 'Can not perform operation on "%s" because it is not of type number.', input);
+  };
+};
 
+var invariantNumberOrStringCheck = function (input) {
+  if (typeof(input) !== "number" || typeof(input) !== "string") {
+    // console.log(typeof(input))
+    invariant(!input, 'Can not perform operation on "%s" because it is not of type number or of type string.', input);
+  };
+};
 
 var stateConvenienceMethods = {
   state: {
@@ -88,129 +93,166 @@ var stateConvenienceMethods = {
     this.state = assign({}, this.state, newState);
   },
 
-  addState: function (propsToAdd) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToAdd, state, function(newProps, originalProps) {
-      return originalProps + newProps;
-    }));
+  addState: function (propsToAdd, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToAdd, function(newProps, originalProps, key) {
+      invariantNumberOrStringCheck(newProps[key]);
+      originalProps[key] = originalProps[key] + newProps[key];
+      return originalProps;
+    });
+    this.setState(newState, callback);
   },
 
-  subtractState: function(propsToSubtract) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToSubtract, state, function(newProps, originalProps) {
-      return originalProps - newProps;
-    }));
+  subtractState: function(propsToSubtract, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToSubtract, function(newProps, originalProps, key) {
+      invariantNumberCheck(newProps[key]);
+      originalProps[key] = originalProps[key] - newProps[key];
+      return originalProps;
+    });
+    // console.log('ths is state')
+    // console.log(this.state)
+    // this.setState(newState, callback);
   },
 
-  multiplyState: function (propsToMultiply) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToMultiply, state, function(newProps, originalProps) {
-      return originalProps * newProps;
-    }));
+  multiplyState: function (propsToMultiply, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToMultiply, function(newProps, originalProps, key) {
+      invariantNumberCheck(newProps[key]);
+      originalProps[key] = originalProps[key] * newProps[key];
+      return originalProps;
+    });
+    // this.setState(newState, callback);
   },
 
-  divideState: function (propsToDivide) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToDivide, state, function(newProps, originalProps) {
-      return originalProps / newProps;
-    }));
+  divideState: function (propsToDivide, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToDivide, function(newProps, originalProps, key) {
+      invariantNumberCheck(newProps[key]);
+      originalProps[key] = originalProps[key] / newProps[key];
+      return originalProps;
+    });
+    this.setState(newState, callback);
   },
 
-  omitState: function (propsToDelete) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToDelete, state, function(newProps, originalProps) {
-
-    }));
-    // this.setState(removePassedInKeys(propsToDelete, state));
+  omitState: function (propsToOmit, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToOmit, function(newProps, originalProps, key) {
+      delete originalProps[key];
+    });
+    this.replaceState(newState, callback);
   },
 
-  extendState: function (newProps) {
-    var newState = assign({}, this.state);
-    if (hasAnyOuterKeysMatching(newProps, this.state)) {
-      this.setState(assign(this.state, newProps));
-    } else {
-      invariant(newProps, "Passed in keys don't match any keys in the current state");
+  extendState: function (propsToExtend, callback) {
+    var currentState = assign({}, this.state);
+    if (hasAnyOuterKeysMatching(currentState, propsToExtend)) {
+      var newState = assign(currentState, propsToExtend);
+      this.setState(newState, callback);
     }
   },
 
-  pushState: function (propsToPush) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToPush, state, function(newProps, originalProps) {
-      originalProps.push(newProps);
+  pushState: function (propsToPush, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToPush, function(newProps, originalProps, key) {
+      //if there are multiple values to push and they are stored in an array
+      // if (Array.isArray(newProps[key])) {
+      //   originalProps[key] = originalProps[key].concat(newProps[key]);
+      // } else {
+      //   //if there is only one value to push
+      //   originalProps[key] = originalProps[key].concat(newProps[key]);
+      //   // originalProps[key].push(newProps[key]);
+      // }
+
+      // var moreProps = assign({}, originalProps)[key]
+
+      originalProps[key] = originalProps[key].concat(newProps[key]);
+
+
+      // originalProps[key] = ''
       return originalProps;
-    }));
+    });
+
+    // console.log(this.state);
+    // this.setState(newState, callback);
   },
 
-  popState: function (propsToPop) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToPop, state, function(newProps, originalProps) {
-      originalProps.pop();
+  popState: function (propsToPop, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToPop, function(newProps, originalProps, key) {
+      originalProps[key].pop();
       return originalProps;
-    }));
-  },
-
-  unshiftState: function(propsToUnshift) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToUnshift, state, function(newProps, originalProps) {
-      originalProps.unshift(newProps);
-      return originalProps;
-    }));
-  },
-
-  shiftState: function(propsToShift) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToShift, state, function(newProps, originalProps) {
-      originalProps.shift();
-      return originalProps;
-    }));
-  },
-
-  spliceState: function(propsToSplice) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToSplice, state, function(newProps, originalProps) {
-      //some splice logic here
-      return originalProps;
-    }));
-  },
-
-  concatToEndOfState: function(propsToConcat) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToConcat, state, function(newProps, originalProps) {
-      originalProps = originalProps.concat(newProps);
-      return originalProps;
-    }));
-  },
-
-  concatToFrontOfState: function(propsToConcat) {
-    var state = assign({}, this.state);
-    console.log(findDeepKeysAndApply(propsToConcat, state, function(newProps, originalProps) {
-      originalProps = newProps.concat(originalProps);
-      return originalProps;
-    }));
-  },
-
-
-  resetState : function () {
-    var newState = assign({}, this.state);
+    });
     this.setState(newState);
   },
 
+  unshiftState: function(propsToUnshift, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToUnshift, function(newProps, originalProps, key) {
+      //if there are multiple values to unshift and they are stored in an array
+      if (Array.isArray(newProps[key])) {
+        originalProps[key] = newProps[key].concat(originalProps[key]);
+      } else {
+        //if there is only one value to unshift
+        originalProps[key].unshift(newProps[key]);
+      }
+      return originalProps;
+    });
+    this.setState(newState, callback);
+  },
+
+  shiftState: function(propsToShift, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToShift, function(newProps, originalProps, key) {
+      originalProps[key].shift();
+      return originalProps;
+    });
+    this.setState(newState, callback);
+  },
+
+  spliceState: function(propsToSplice, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToSplice, function(newProps, originalProps, key) {
+      Array.prototype.splice.apply(originalProps[key], newProps[key]);
+      return originalProps;
+    });
+    this.setState(newState, callback);
+  },
+
+  concatToEndOfState: function(propsToConcat, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToConcat, function(newProps, originalProps, key) {
+      originalProps[key] = originalProps[key].concat(newProps[key]);
+      return originalProps;
+    });
+    this.setState(newState, callback);
+  },
+
+  concatToFrontOfState: function(propsToConcat, callback) {
+    var currentState = assign({}, this.state);
+    var newState = findDeepKeysAndApply(currentState, propsToConcat, function(newProps, originalProps, key) {
+      originalProps[key] = newProps[key].concat(originalProps[key]);
+      return originalProps;
+    });
+    this.setState(newState, callback);
+  },
+
+  resetState : function (callback) {
+    var newState = assign({}, this.getIntialState);
+    this.replaceState(newState, callback);
+  }
 };
 
-// OMIT
-var deleteProps = {
-  'Pat':{
-    'pigeon':true,
-    'cat':true,
-    'dog':{
-      'age':true
-    }
-  },
-  'Dmitri':true
+//PUSH ...
+var propsToPush = {
+  'Gunnari': {
+    'turtles':['Dmitri', 'Snuggles']
+  }
 };
+
 console.log(stateConvenienceMethods.state);
-stateConvenienceMethods.omitState(deleteProps);
-// console.log(stateConvenienceMethods.state);
+stateConvenienceMethods.pushState(propsToPush);
+console.log(stateConvenienceMethods.state);
+
 
 
 //SUBTRACT
@@ -220,7 +262,7 @@ stateConvenienceMethods.omitState(deleteProps);
 //       'age':1
 //     },
 //     'dog':{
-//       'age':3
+//       'age':1
 //     }
 //   },
 //   'Dmitri':{
@@ -232,99 +274,32 @@ stateConvenienceMethods.omitState(deleteProps);
 
 // console.log(stateConvenienceMethods.state);
 // stateConvenienceMethods.subtractState(propsToSubtract);
-
-
-//CONCAT TO FRONT
-// var propsToConcat = {
-//   'Gunnari': {
-//     'turtles':['Wilbert', 'Jane', 'Mufasa']
-//   }
-// };
-
 // console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.concatToFrontOfState(propsToConcat);
-
-//CONCAT TO END
-// var propsToConcat = {
-//   'Gunnari': {
-//     'turtles':['Wilbert', 'Jane', 'Mufasa']
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.concatToEndOfState(propsToConcat);
-
-//SPLICE ... how are args passed in?
-// var propsToSplice = {
-//   'Gunnari': {
-//     'turtles':true
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.shiftState(propsToShift);
-
-//SHIFT
-// var propsToShift = {
-//   'Gunnari': {
-//     'turtles':true
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.shiftState(propsToShift);
-
-//UNSHIFT
-// var propsToUnshift = {
-//   'Gunnari': {
-//     'turtles':'Dmitri'
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.unshiftState(propsToUnshift);
 
 
-//POP
-// var propsToPop = {
-//   'Gunnari': {
-//     'turtles':true
-//   }
-// };
 
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.popState(propsToPop);
-
-//PUSH ...
-// var propsToPush = {
-//   'Gunnari': {
-//     'turtles':'Dmitri'
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.pushState(propsToPush);
-
-//DIVIDE
-// var propsToDivide = {
+//ADD
+// var propsToAdd = {
 //   'Pat':{
 //     'cat':{
-//       'age':2
-//     },
-//     'dog':{
-//       'age':30
+//       'age':3
 //     }
 //   },
 //   'Dmitri':{
 //     'cat': {
-//       'age':2
+//       'name':'-Gunnari'
 //     }
 //   }
 // };
 
-
 // console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.divideState(propsToDivide);
+// stateConvenienceMethods.addState(propsToAdd);
+// console.log(stateConvenienceMethods.state);
+
+
+
+
+
 
 //MULTIPLY
 // var propsToMultiply = {
@@ -346,46 +321,157 @@ stateConvenienceMethods.omitState(deleteProps);
 
 // console.log(stateConvenienceMethods.state);
 // stateConvenienceMethods.multiplyState(propsToMultiply);
+// console.log(stateConvenienceMethods.state);
 
 
-//ADD
-// var propsToAdd = {
+
+
+
+//DIVIDE
+// var propsToDivide = {
 //   'Pat':{
 //     'cat':{
-//       'age':3
+//       'age':2
+//     },
+//     'dog':{
+//       'age':30
 //     }
 //   },
 //   'Dmitri':{
 //     'cat': {
-//       'name':'-Gunnari'
+//       'age':2
 //     }
 //   }
 // };
 
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.addState(propsToAdd);
 
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.divideState(propsToDivide);
+// console.log(stateConvenienceMethods.state);
+
+
+//SPLICE
+// var propsToSplice = {
+//   'Gunnari': {
+//     'turtles':[0, 2, 'Wilbert', 'Jane', 'Mufasa']
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.spliceState(propsToSplice);
+// console.log('');
+// console.log(stateConvenienceMethods.state);
+
+//CONCAT TO END
+// var propsToConcat = {
+//   'Gunnari': {
+//     'turtles':['Wilbert', 'Jane', 'Mufasa']
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.concatToEndOfState(propsToConcat);
+// console.log(stateConvenienceMethods.state);
+
+
+//CONCAT TO FRONT
+// var propsToConcat = {
+//   'Gunnari': {
+//     'turtles':['Wilbert', 'Jane', 'Mufasa']
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.concatToFrontOfState(propsToConcat);
+// console.log(stateConvenienceMethods.state);
+
+
+//SHIFT
+// var propsToShift = {
+//   'Gunnari': {
+//     'turtles':true
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.shiftState(propsToShift);
+// console.log(stateConvenienceMethods.state);
+
+//UNSHIFT
+// var propsToUnshift = {
+//   'Gunnari': {
+//     'turtles':['Dmitri', 'Snuggles']
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.unshiftState(propsToUnshift);
+// console.log(stateConvenienceMethods.state);
+
+
+
+//POP
+// var propsToPop = {
+//   'Gunnari': {
+//     'turtles':true
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.popState(propsToPop);
+// console.log(stateConvenienceMethods.state);
 
 
 // // EXTEND
-// var newObj = {
-//   characteristics: {
-//     id: 2,
-//     username: 'Guns',
-//     newChar: {
-//       newProp: true
-//     }
-//   },
-//   somePropThatsNotInState: true
+// var extendProps = {
+//   // 'Dmitri':{
+//   //   'birds':true
+//   // },
+//   'Spencer':true
 // };
 
 
 // console.log(stateConvenienceMethods.state);
+// console.log('');
+// stateConvenienceMethods.extendState(extendProps);
+// console.log(stateConvenienceMethods.state);
 
-// // stateConvenienceMethods.extendState(newObj);
-// stateConvenienceMethods.extendState({somePropThatsNotInState: true});
+// OMIT
+// var deleteProps = {
+//   'Pat':{
+//     'pigeon':true,
+//     'cat':true,
+//     'dog':{
+//       'age':true
+//     }
+//   },
+//   'Dmitri':true
+// };
+// console.log(stateConvenienceMethods.state);
+// console.log('');
+// stateConvenienceMethods.omitState(deleteProps);
+// console.log('');
+// console.log(stateConvenienceMethods.state);
+
+
+
+
+//SPLICE ... how are args passed in?
+// var propsToSplice = {
+//   'Gunnari': {
+//     'turtles':true
+//   }
+// };
 
 // console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.shiftState(propsToShift);
+
+
+
+
+
+
+
 
 
 
