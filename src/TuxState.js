@@ -4,41 +4,99 @@ var assign = require('object-assign');
 var invariant = require('./TuxInvariant');
 var update = require('../React/update');
 
+// var assign = function(obj, extendObj){
+//   for (var key in extendObj) {
+//     if (extendObj.hasOwnProperty(key)) {
+//       obj[key] = extendObj[key];
+//     }
+//   }
+//   return obj;
+// }
+
+/*
+callback = function(newSt, key, stAtKey, valAtKey) {
+  newSt[key] = valAtKey * stAtKey
+  delete newSt[key];
+};
+*/
+
+var buildNewState = function (currentState, newProps, callback) {
+  var newState = assign({}, currentState);
+  var keyChain = [];
+  var recurseKeys = function (currentSt, newSt, newPr) {
+    for (var key in newPr) {
+      if (newPr.hasOwnProperty(key)) {
+        var valAtKey = newPr[key];
+        //error check valAtKey
+        var stAtKey = currentSt[key];
+        if (valAtKey !== null && typeof valAtKey === 'object' && !Array.isArray(valAtKey) && stAtKey !== null && typeof stAtKey === 'object' && !Array.isArray(stAtKey)) {
+          newSt[key] = assign({}, stAtKey);
+          recurseKeys(stAtKey, newSt[key], valAtKey);
+        } else {
+          callback(newSt, key, stAtKey, valAtKey);
+
+        }
+      }
+    }
+  };
+  recurseKeys(currentState, newState, newProps);
+  return newState;
+};
+
+
+////////////////////////
+
+
+
+
 //only assign on the key that is being operated on ...
 //wherever you modify keys, make sure you assign
 var findDeepKeysAndApply = function (currentState, newProps, callback) {
+  var newState = assign({}, currentState);
+  // var newObject = JSON.stringify(currentState);
+  // var newObject = JSON.parse(newObject);
+  console.log(currentState)
   var traverseProps = function (inputProps, keys) {
     keys = keys ? keys : [];
     var keyChain;
 
     for (var key in inputProps) {
-      var currentKey;
 
       var keyChain = currentState;
       var newState = newProps;
+
+      //KEEPS TRACK OF NESTED KEYS IN THE NEW PROPS ... KEYS IS AN ARRAY HOLDING EACH NESTED KEY THAT GETS YOU TO THE CURRENT PATH
       if (keys.length) {
         for (var i = 0; i < keys.length; i++) {
-          // keyChain =  keyChain[keys[i]];
+          // keyChain = keyChain[keys[i]];
           // newState = newState[keys[i]];
-          keyChain =  assign({}, keyChain[keys[i]]);
+          keyChain = assign({}, keyChain[keys[i]]);
           newState = assign({}, newState[keys[i]]);
         }
       }
 
-      // console.log(keyChain)
+      //IF ANY OF HTE KEYS IN NEW PROPS DONT MATCH UP WITH CURRENT PROPS, ERROR
       invariant(keyChain.hasOwnProperty(key), 'The "%s" property is not defined in the current state.', key);
-      currentKey = keyChain[key];
 
+      //IF THERE IS A NESTED OBJECT, RECURSE BACK WITH THAT OBJECT
       if (Object.prototype.toString.call(inputProps[key]) === "[object Object]") {
+        //PUSH THE CURRENT KEY TO THE KEYS ARRAY TO MAINTAIN THE PATH
         keys.push(key);
         traverseProps(inputProps[key], keys);
         keys.pop();
       } else {
-        currentState = callback(newState, keyChain, key);
+        // IF THERE ARE NO MORE NESTED KEYS IN NEW PROPS, WE'VE FOUND THE DEEPEST KEY, SO RUN CALLBACK ON IT
+
+        keyChain = callback(newState, keyChain, key);
+        console.log(keyChain)
       }
     }
   };
+
   traverseProps(newProps);
+
+
+
   return currentState;
 };
 
@@ -96,12 +154,12 @@ var stateConvenienceMethods = {
 
   addState: function (propsToAdd, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToAdd, function(newProps, originalProps, key) {
-      invariantNumberOrStringCheck(newProps[key]);
+    var newState = buildNewState(currentState, propsToAdd, function(newProps, originalProps, key) {
+      // invariantNumberOrStringCheck(newProps[key]);
       originalProps[key] = originalProps[key] + newProps[key];
       return originalProps;
     });
-    this.setState(newState, callback);
+    // this.setState(newState, callback);
   },
 
   subtractState: function(propsToSubtract, callback) {
@@ -111,7 +169,8 @@ var stateConvenienceMethods = {
       originalProps[key] = originalProps[key] - newProps[key];
       return originalProps;
     });
-    // console.log('ths is state')
+    // console.log("here is new state!");
+    // console.log(newState);
     // console.log(this.state)
     // this.setState(newState, callback);
   },
@@ -158,7 +217,7 @@ var stateConvenienceMethods = {
       originalProps[key] = originalProps[key].concat(newProps[key]);
       return originalProps;
     });
-    // this.setState(newState, callback);
+    this.setState(newState, callback);
   },
 
   popState: function (propsToPop, callback) {
@@ -227,6 +286,28 @@ var stateConvenienceMethods = {
   }
 };
 
+
+//ADD
+var propsToAdd = {
+  'Pat':{
+    'cat':{
+      'age':3
+    }
+  },
+  'Dmitri':{
+    'cat': {
+      'name':'-Gunnari'
+    }
+  }
+};
+
+console.log(stateConvenienceMethods.state);
+stateConvenienceMethods.addState(propsToAdd);
+console.log(stateConvenienceMethods.state);
+
+
+
+
 //PUSH ...
 // var propsToPush = {
 //   'Gunnari': {
@@ -259,26 +340,6 @@ var propsToSubtract = {
 
 // console.log(stateConvenienceMethods.state);
 // stateConvenienceMethods.subtractState(propsToSubtract);
-// console.log(stateConvenienceMethods.state);
-
-
-
-//ADD
-// var propsToAdd = {
-//   'Pat':{
-//     'cat':{
-//       'age':3
-//     }
-//   },
-//   'Dmitri':{
-//     'cat': {
-//       'name':'-Gunnari'
-//     }
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.addState(propsToAdd);
 // console.log(stateConvenienceMethods.state);
 
 
