@@ -111,14 +111,30 @@ var hasAnyOuterKeysMatching = function (currentState, newProps) {
 
 var invariantNumberCheck = function (input) {
   if (typeof(input) !== "number") {
-    invariant(!input, 'Can not perform operation on "%s" because it is not of type number.', input);
+    invariant(!input, 'Cannot perform operation on "%s" because it is not of type number.', input);
   };
 };
 
+
+
+var invariantArrayCheck = function (input, message) {
+  if (!Array.isArray(input)) {
+    invariant(!input, 'Cannot perform operation on "%s" because it is not an array.', input);
+  };
+};
+
+
+
+var invariantValueCheck = function (input) {
+  if (typeof(input) === "object") {
+    invariant(!input, 'Cannot perform operation on "%s" because it must be a single value.', input);
+  }
+}
+
 var invariantNumberOrStringCheck = function (input) {
-  if (typeof(input) !== "number" || typeof(input) !== "string") {
+  if (typeof(input) !== "number" && typeof(input) !== "string") {
     // console.log(typeof(input))
-    invariant(!input, 'Can not perform operation on "%s" because it is not of type number or of type string.', input);
+    invariant(!input, 'Cannot perform operation on "%s" because it is not of type number or of type string.', input);
   };
 };
 
@@ -154,51 +170,44 @@ var stateConvenienceMethods = {
 
   addState: function (propsToAdd, callback) {
     var currentState = assign({}, this.state);
-    var newState = buildNewState(currentState, propsToAdd, function(newProps, originalProps, key) {
-      // invariantNumberOrStringCheck(newProps[key]);
-      originalProps[key] = originalProps[key] + newProps[key];
-      return originalProps;
+    var newState = buildNewState(currentState, propsToAdd, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      invariantNumberOrStringCheck(newPropsAtKey);
+      newState[key] = currentStateAtKey + newPropsAtKey;
     });
-    // this.setState(newState, callback);
+    this.setState(newState, callback);
   },
 
   subtractState: function(propsToSubtract, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToSubtract, function(newProps, originalProps, key) {
-      invariantNumberCheck(newProps[key]);
-      originalProps[key] = originalProps[key] - newProps[key];
-      return originalProps;
+    var newState = buildNewState(currentState, propsToSubtract, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      invariantNumberCheck(newPropsAtKey);
+      newState[key] = currentStateAtKey - newPropsAtKey;
     });
-    // console.log("here is new state!");
-    // console.log(newState);
-    // console.log(this.state)
-    // this.setState(newState, callback);
+    this.setState(newState, callback);
   },
 
   multiplyState: function (propsToMultiply, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToMultiply, function(newProps, originalProps, key) {
-      invariantNumberCheck(newProps[key]);
-      originalProps[key] = originalProps[key] * newProps[key];
-      return originalProps;
+    var newState = buildNewState(currentState, propsToMultiply, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      invariantNumberCheck(newPropsAtKey);
+      newState[key] = currentStateAtKey * newPropsAtKey;
     });
-    // this.setState(newState, callback);
+    this.setState(newState, callback);
   },
 
   divideState: function (propsToDivide, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToDivide, function(newProps, originalProps, key) {
-      invariantNumberCheck(newProps[key]);
-      originalProps[key] = originalProps[key] / newProps[key];
-      return originalProps;
+    var newState = buildNewState(currentState, propsToDivide, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      invariantNumberCheck(newPropsAtKey);
+      newState[key] = currentStateAtKey / newPropsAtKey;
     });
     this.setState(newState, callback);
   },
 
   omitState: function (propsToOmit, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToOmit, function(newProps, originalProps, key) {
-      delete originalProps[key];
+    var newState = buildNewState(currentState, propsToOmit, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      delete newState[key];
     });
     this.replaceState(newState, callback);
   },
@@ -213,69 +222,93 @@ var stateConvenienceMethods = {
 
   pushState: function (propsToPush, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToPush, function(newProps, originalProps, key) {
-      originalProps[key] = originalProps[key].concat(newProps[key]);
-      return originalProps;
+    var newState = buildNewState(currentState, propsToPush, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //check that current state at this key is an array
+      invariantArrayCheck(currentStateAtKey);
+      //check that there is only one value being pushed in
+      invariantValueCheck(newPropsAtKey);
+      currentStateAtKey.push(newPropsAtKey);
+      newState[key] = currentStateAtKey;
     });
+    //do we really need to call this since we're mutating the current state already?
     this.setState(newState, callback);
   },
 
   popState: function (propsToPop, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToPop, function(newProps, originalProps, key) {
-      originalProps[key].pop();
-      return originalProps;
+    var newState = buildNewState(currentState, propsToPop, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //check that current state at this key is an array
+      invariantArrayCheck(currentStateAtKey);
+
+      currentStateAtKey.pop();
+      newState[key] = currentStateAtKey;
     });
+    //do we really need to call this since we're mutating the array?
     this.setState(newState);
   },
 
   unshiftState: function(propsToUnshift, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToUnshift, function(newProps, originalProps, key) {
-      //if there are multiple values to unshift and they are stored in an array
-      if (Array.isArray(newProps[key])) {
-        originalProps[key] = newProps[key].concat(originalProps[key]);
-      } else {
-        //if there is only one value to unshift
-        originalProps[key].unshift(newProps[key]);
-      }
-      return originalProps;
+    var newState = buildNewState(currentState, propsToUnshift, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //check that current state at this key is an array
+      invariantArrayCheck(currentStateAtKey);
+      //check that there is only one value being pushed in
+      invariantValueCheck(newPropsAtKey);
+      currentStateAtKey.unshift(newPropsAtKey);
+      newState[key] = currentStateAtKey;
     });
+    //do we really need to call this since we're mutating the array?
     this.setState(newState, callback);
   },
 
   shiftState: function(propsToShift, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToShift, function(newProps, originalProps, key) {
-      originalProps[key].shift();
-      return originalProps;
+    var newState = buildNewState(currentState, propsToShift, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //check that current state at this key is an array
+      invariantArrayCheck(currentStateAtKey);
+      currentStateAtKey.shift();
+      newState[key] = currentStateAtKey;
     });
+    //do we really need to call this since we're mutating the array?
     this.setState(newState, callback);
   },
 
   spliceState: function(propsToSplice, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToSplice, function(newProps, originalProps, key) {
-      Array.prototype.splice.apply(originalProps[key], newProps[key]);
-      return originalProps;
+    var newState = buildNewState(currentState, propsToSplice, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //check that current state at this key is an array
+      invariantArrayCheck(currentStateAtKey);
+
+      //Should probably check that first 2 indexes of newPropsAtKey are integers? or should we let native javasciprt error handle that?
+      Array.prototype.splice.apply(currentStateAtKey, newPropsAtKey);
+      newState[key] = currentStateAtKey;
     });
+    //do we really need to call this since we're mutating the array?
     this.setState(newState, callback);
   },
 
   concatToEndOfState: function(propsToConcat, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToConcat, function(newProps, originalProps, key) {
-      originalProps[key] = originalProps[key].concat(newProps[key]);
-      return originalProps;
+    var newState = buildNewState(currentState, propsToConcat, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //check that currentStateAtKey is an array
+      invariantArrayCheck(currentStateAtKey);
+      //check that newProps at this key is an array
+      invariantArrayCheck(newPropsAtKey);
+      //set the newState at this key to be the concatted result
+      newState[key] = currentStateAtKey.concat(newPropsAtKey);
     });
     this.setState(newState, callback);
   },
 
   concatToFrontOfState: function(propsToConcat, callback) {
     var currentState = assign({}, this.state);
-    var newState = findDeepKeysAndApply(currentState, propsToConcat, function(newProps, originalProps, key) {
-      originalProps[key] = newProps[key].concat(originalProps[key]);
-      return originalProps;
+    var newState = buildNewState(currentState, propsToConcat, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //check that currentStateAtKey is an array
+      invariantArrayCheck(currentStateAtKey);
+      //check that newProps at this key is an array
+      invariantArrayCheck(newPropsAtKey);
+      //set the newState at this key to be the concatted result
+      newState[key] = newPropsAtKey.concat(currentStateAtKey);
     });
     this.setState(newState, callback);
   },
@@ -288,55 +321,43 @@ var stateConvenienceMethods = {
 
 
 //ADD
-var propsToAdd = {
-  'Pat':{
-    'cat':{
-      'age':3
-    }
-  },
-  'Dmitri':{
-    'cat': {
-      'name':'-Gunnari'
-    }
-  }
-};
-
-console.log(stateConvenienceMethods.state);
-stateConvenienceMethods.addState(propsToAdd);
-console.log(stateConvenienceMethods.state);
-
-
-
-
-//PUSH ...
-// var propsToPush = {
-//   'Gunnari': {
-//     'turtles':['Dmitri', 'Snuggles']
+// var propsToAdd = {
+//   'Pat':{
+//     'cat':{
+//       'age':9
+//     }
+//   },
+//   'Dmitri':{
+//     'cat': {
+//       'name':'-Gunnari'
+//     }
 //   }
 // };
 
 // console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.pushState(propsToPush);
+// stateConvenienceMethods.addState(propsToAdd);
 // console.log(stateConvenienceMethods.state);
 
 
 
+
+
 //SUBTRACT
-var propsToSubtract = {
-  'Pat':{
-    'cat':{
-      'age':1
-    },
-    'dog':{
-      'age':1
-    }
-  },
-  'Dmitri':{
-    'cat': {
-      'age':2
-    }
-  }
-};
+// var propsToSubtract = {
+//   'Pat':{
+//     'cat':{
+//       'age':1
+//     },
+//     'dog':{
+//       'age':1
+//     }
+//   },
+//   'Dmitri':{
+//     'cat': {
+//       'age':2
+//     }
+//   }
+// };
 
 // console.log(stateConvenienceMethods.state);
 // stateConvenienceMethods.subtractState(propsToSubtract);
@@ -395,11 +416,93 @@ var propsToSubtract = {
 // stateConvenienceMethods.divideState(propsToDivide);
 // console.log(stateConvenienceMethods.state);
 
+// OMIT
+// var deleteProps = {
+//   'Pat':{
+//     'pigeon':true,
+//     'cat':true,
+//     'dog':{
+//       'age':true
+//     }
+//   },
+//   'Dmitri':true
+// };
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.omitState(deleteProps);
+
+// // EXTEND
+// var extendProps = {
+//   'Dmitri':{
+//     'birds':true
+//   },
+//   'Spencer':true
+// };
+
+
+// console.log(stateConvenienceMethods.state);
+// console.log('');
+// stateConvenienceMethods.extendState(extendProps);
+// console.log(stateConvenienceMethods.state);
+
+
+
+
+//PUSH ...
+// var propsToPush = {
+//   'Gunnari': {
+//     'turtles':'Snuggles'
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.pushState(propsToPush);
+// console.log(stateConvenienceMethods.state);
+
+
+
+//POP
+// var propsToPop = {
+//   'Gunnari': {
+//     'turtles':true
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.popState(propsToPop);
+// console.log(stateConvenienceMethods.state);
+
+//UNSHIFT
+// var propsToUnshift = {
+//   'Gunnari': {
+//     'turtles':'Snuggles'
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.unshiftState(propsToUnshift);
+// console.log(stateConvenienceMethods.state);
+
+
+//SHIFT
+// var propsToShift = {
+//   'Gunnari': {
+//     'turtles':true
+//   }
+// };
+
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.shiftState(propsToShift);
+// console.log(stateConvenienceMethods.state);
+
+
+
+
+
 
 //SPLICE
 // var propsToSplice = {
 //   'Gunnari': {
-//     'turtles':[0, 2, 'Wilbert', 'Jane', 'Mufasa']
+//     'turtles':[1, 1, 'Wilbert', 'Jane', 'Mufasa']
 //   }
 // };
 
@@ -421,83 +524,19 @@ var propsToSubtract = {
 
 
 //CONCAT TO FRONT
-// var propsToConcat = {
-//   'Gunnari': {
-//     'turtles':['Wilbert', 'Jane', 'Mufasa']
-//   }
-// };
+var propsToConcat = {
+  'Gunnari': {
+    'turtles':['Wilbert', 'Jane', 'Mufasa']
+  }
+};
 
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.concatToFrontOfState(propsToConcat);
-// console.log(stateConvenienceMethods.state);
-
-
-//SHIFT
-// var propsToShift = {
-//   'Gunnari': {
-//     'turtles':true
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.shiftState(propsToShift);
-// console.log(stateConvenienceMethods.state);
-
-//UNSHIFT
-// var propsToUnshift = {
-//   'Gunnari': {
-//     'turtles':['Dmitri', 'Snuggles']
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.unshiftState(propsToUnshift);
-// console.log(stateConvenienceMethods.state);
+console.log(stateConvenienceMethods.state);
+stateConvenienceMethods.concatToFrontOfState(propsToConcat);
+console.log(stateConvenienceMethods.state);
 
 
 
-//POP
-// var propsToPop = {
-//   'Gunnari': {
-//     'turtles':true
-//   }
-// };
 
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.popState(propsToPop);
-// console.log(stateConvenienceMethods.state);
-
-
-// // EXTEND
-// var extendProps = {
-//   // 'Dmitri':{
-//   //   'birds':true
-//   // },
-//   'Spencer':true
-// };
-
-
-// console.log(stateConvenienceMethods.state);
-// console.log('');
-// stateConvenienceMethods.extendState(extendProps);
-// console.log(stateConvenienceMethods.state);
-
-// OMIT
-// var deleteProps = {
-//   'Pat':{
-//     'pigeon':true,
-//     'cat':true,
-//     'dog':{
-//       'age':true
-//     }
-//   },
-//   'Dmitri':true
-// };
-// console.log(stateConvenienceMethods.state);
-// console.log('');
-// stateConvenienceMethods.omitState(deleteProps);
-// console.log('');
-// console.log(stateConvenienceMethods.state);
 
 
 
