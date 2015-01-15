@@ -14,30 +14,31 @@ var findDeepKeysAndApply = function (currentState, newProps, callback) {
     for (var key in inputProps) {
       var currentKey;
 
-      var keyChain = assign({}, currentState);
-      var newState = assign({}, newProps);
+      var keyChain = currentState;
+      var newState = newProps;
       if (keys.length) {
         for (var i = 0; i < keys.length; i++) {
+          // keyChain =  keyChain[keys[i]];
+          // newState = newState[keys[i]];
           keyChain =  assign({}, keyChain[keys[i]]);
           newState = assign({}, newState[keys[i]]);
         }
       }
 
+      // console.log(keyChain)
       invariant(keyChain.hasOwnProperty(key), 'The "%s" property is not defined in the current state.', key);
       currentKey = keyChain[key];
 
       if (Object.prototype.toString.call(inputProps[key]) === "[object Object]") {
         keys.push(key);
-        traverseProps(assign({}, inputProps[key]), keys);
+        traverseProps(inputProps[key], keys);
         keys.pop();
       } else {
-        callback(newState, keyChain, key);
+        currentState = callback(newState, keyChain, key);
       }
     }
   };
   traverseProps(newProps);
-  // currentState = 'hi'
-  // return assign({}, currentState);
   return currentState;
 };
 
@@ -154,25 +155,9 @@ var stateConvenienceMethods = {
   pushState: function (propsToPush, callback) {
     var currentState = assign({}, this.state);
     var newState = findDeepKeysAndApply(currentState, propsToPush, function(newProps, originalProps, key) {
-      //if there are multiple values to push and they are stored in an array
-      // if (Array.isArray(newProps[key])) {
-      //   originalProps[key] = originalProps[key].concat(newProps[key]);
-      // } else {
-      //   //if there is only one value to push
-      //   originalProps[key] = originalProps[key].concat(newProps[key]);
-      //   // originalProps[key].push(newProps[key]);
-      // }
-
-      // var moreProps = assign({}, originalProps)[key]
-
       originalProps[key] = originalProps[key].concat(newProps[key]);
-
-
-      // originalProps[key] = ''
       return originalProps;
     });
-
-    // console.log(this.state);
     // this.setState(newState, callback);
   },
 
@@ -243,34 +228,34 @@ var stateConvenienceMethods = {
 };
 
 //PUSH ...
-var propsToPush = {
-  'Gunnari': {
-    'turtles':['Dmitri', 'Snuggles']
-  }
-};
+// var propsToPush = {
+//   'Gunnari': {
+//     'turtles':['Dmitri', 'Snuggles']
+//   }
+// };
 
-console.log(stateConvenienceMethods.state);
-stateConvenienceMethods.pushState(propsToPush);
-console.log(stateConvenienceMethods.state);
+// console.log(stateConvenienceMethods.state);
+// stateConvenienceMethods.pushState(propsToPush);
+// console.log(stateConvenienceMethods.state);
 
 
 
 //SUBTRACT
-// var propsToSubtract = {
-//   'Pat':{
-//     'cat':{
-//       'age':1
-//     },
-//     'dog':{
-//       'age':1
-//     }
-//   },
-//   'Dmitri':{
-//     'cat': {
-//       'age':2
-//     }
-//   }
-// };
+var propsToSubtract = {
+  'Pat':{
+    'cat':{
+      'age':1
+    },
+    'dog':{
+      'age':1
+    }
+  },
+  'Dmitri':{
+    'cat': {
+      'age':2
+    }
+  }
+};
 
 // console.log(stateConvenienceMethods.state);
 // stateConvenienceMethods.subtractState(propsToSubtract);
