@@ -1,7 +1,6 @@
 'use strict';
 
 var moduleToTest = 'tux/src/TuxState';
-var invariant = require('tux/src/TuxInvariant');
 
 jest.dontMock(moduleToTest);
 
@@ -9,7 +8,9 @@ describe('TuxState', function () {
   var stateMixin, callback;
 
   beforeEach(function () {
+    //reset stateMixin before each test
     stateMixin = require(moduleToTest);
+    //create state object for each test
     stateMixin.state = {
       'Pat': {
         'cat': {
@@ -34,6 +35,7 @@ describe('TuxState', function () {
         'turtles':['Pat', 'Spencer']
       }
     };
+    //mimick getInitialState method of React Components and return fake data
     stateMixin.getInitialState = function () {
       return {
         'Pat':true,
@@ -42,8 +44,11 @@ describe('TuxState', function () {
         'Spencer':true
       };
     };
+    //create mock of setState method
     stateMixin.setState = jest.genMockFunction();
+    //create mock of replaceState method
     stateMixin.replaceState = jest.genMockFunction();
+    //create optional callback that will eventually be passed in to setState
     callback = function () {
       return;
     };

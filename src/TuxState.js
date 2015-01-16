@@ -1,7 +1,7 @@
 'use strict';
 
 var assign = require('object-assign');
-var invariant = require('./TuxInvariant');
+var invariant = require('tux/src/TuxInvariant');
 
 //buildNewState FUNCTION:
 //@param currentState OBJECT: required object argument with deepest keys being numbers or strings to add to the current state
