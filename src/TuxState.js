@@ -43,7 +43,7 @@ var invariantArrayCheck = function (input, message) {
 
 var invariantValueCheck = function (input) {
   if (typeof(input) === "object") {
-    invariant(!input, 'Cannot perform operation on "%s" because it must be a single value.', input);
+    invariant(!input, 'Cannot perform operation on "%s" because it must not be an array or object.', input);
   }
 }
 

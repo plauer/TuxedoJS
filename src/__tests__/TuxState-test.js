@@ -588,13 +588,13 @@ describe('TuxState', function () {
   });
 
   describe('State methods error handling', function () {
-    it('should throw an error when a required argument is not passed in.', function () {
+    it('should throw an error when a required argument is not passed in', function () {
       expect(function () {
         stateMixin.addState();
       }).toThrow(new Error('Invariant Violation: This function requires an object as an argument.'));
     });
 
-    it('should throw an error when anything but an object is passed in as an argument.', function () {
+    it('should throw an error when anything but an object is passed in as an argument', function () {
       expect(function () {
         stateMixin.addState([]);
       }).toThrow(new Error('Invariant Violation: This function requires an object as an argument.'));
@@ -608,7 +608,7 @@ describe('TuxState', function () {
       }).toThrow(new Error('Invariant Violation: This function requires an object as an argument.'));
     });
 
-    it('should throw an error if the deepest keys are not numbers or strings when invoking addState.', function () {
+    it('should throw an error when checking that the deepest keys must be numbers or strings', function () {
       expect(function () {
         var propsToAdd = {
           'Pat':{
@@ -642,7 +642,7 @@ describe('TuxState', function () {
       }).toThrow(new Error('Invariant Violation: Cannot perform operation on "[object Object]" because it is not of type number or of type string.'));
     });
 
-    it('should throw an error if the deepest keys are not numbers when invoking subtractState, multiplyState, or divideState.', function () {
+    it('should throw an error when checking that the deepest keys must be numbers', function () {
       expect(function () {
         var propsToSubtract = {
           'Pat':{
@@ -661,6 +661,74 @@ describe('TuxState', function () {
         };
         stateMixin.subtractState(propsToSubtract, callback);
       }).toThrow(new Error('Invariant Violation: Cannot perform operation on "string" because it is not of type number.'));
+
+      expect(function () {
+        var propsToMultiply = {
+          'Pat':{
+            'cat':{
+              'age':[]
+            },
+            'dog':{
+              'age':3
+            }
+          },
+          'Dmitri':{
+            'cat': {
+              'age':2
+            }
+          }
+        };
+        stateMixin.multiplyState(propsToMultiply, callback);
+      }).toThrow(new Error('Invariant Violation: Cannot perform operation on "" because it is not of type number.'));
+
+      expect(function () {
+        var propsToDivide = {
+          'Pat':{
+            'cat':{
+              'age':{}
+            },
+            'dog':{
+              'age':30
+            }
+          },
+          'Dmitri':{
+            'cat': {
+              'age':2
+            }
+          }
+        };
+        stateMixin.divideState(propsToDivide, callback);
+      }).toThrow(new Error('Invariant Violation: Cannot perform operation on "[object Object]" because it is not of type number.'));
+    });
+
+    it('should throw an error when checking that a passed in object must contain at least one outer key that the current state holds', function () {
+      expect(function () {
+        var propsToExtend = {
+          'Spencer':true
+        };
+        stateMixin.extendState(propsToExtend, callback);
+      }).toThrow(new Error('Invariant Violation: At least one outer key must match an outer key in the current state. Use setState if you only wish to add new keys and not change existing keys.'));
+    });
+
+    it('should throw an error when checking that the deepest keys must not be an array or object', function () {
+      expect(function () {
+        var propsToPush = {
+          'Gunnari': {
+            'turtles':['Snuggles']
+          }
+        };
+        stateMixin.pushState(propsToPush, callback);
+      }).toThrow(new Error('Invariant Violation: Cannot perform operation on "Snuggles" because it must not be an array or object.'));
+
+      expect(function () {
+        var propsToUnshift = {
+          'Gunnari': {
+            'turtles':{}
+          }
+        };
+
+        stateMixin.unshiftState(propsToUnshift, callback);
+      }).toThrow(new Error('Invariant Violation: Cannot perform operation on "[object Object]" because it must not be an array or object.'));
     });
   });
 });
