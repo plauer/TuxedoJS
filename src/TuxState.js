@@ -1,9 +1,12 @@
 'use strict';
 
 var assign = require('object-assign');
-var invariant = require('tux/src/TuxInvariant');
+var invariant = require('./TuxInvariant');
 
-
+//buildNewState FUNCTION:
+//@param currentState OBJECT: required object argument with deepest keys being numbers or strings to add to the current state
+//@param newProps FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
+//@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
 var buildNewState = function (currentState, newProps, callback) {
   var newState = assign({}, currentState);
   var keyChain = [];
@@ -18,7 +21,6 @@ var buildNewState = function (currentState, newProps, callback) {
           recurseKeys(stAtKey, newSt[key], valAtKey);
         } else {
           callback(newSt, key, stAtKey, valAtKey);
-
         }
       }
     }
@@ -52,10 +54,12 @@ var invariantNumberOrStringCheck = function (input) {
 };
 
 var invariantArgCheck = function (input) {
-  if (!input || typeof(input) !== 'object' || Array.isArray(input)) {
-    invariant(!input, 'This function requires an object as an argument.', input);
-  };
-}
+  if (!input) {
+    invariant(input, 'This function requires an object as an argument.');
+  } else if (Object.prototype.toString.call(input) !== '[object Object]') {
+    invariant(!input, 'This function requires an object as an argument.');
+  }
+};
 
 //mixin to that adds convenient methods for updating the state of a component
 var stateConvenienceMethods = {
@@ -308,4 +312,7 @@ var stateConvenienceMethods = {
     this.replaceState(newState, callback);
   }
 };
+
 module.exports = stateConvenienceMethods;
+
+// console.log(stateConvenienceMethods.addState({}));

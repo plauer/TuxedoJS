@@ -586,4 +586,81 @@ describe('TuxState', function () {
       expect(stateMixin.replaceState).toBeCalledWith(expectedProps, callback);
     });
   });
+
+  describe('State methods error handling', function () {
+    it('should throw an error when a required argument is not passed in.', function () {
+      expect(function () {
+        stateMixin.addState();
+      }).toThrow(new Error('Invariant Violation: This function requires an object as an argument.'));
+    });
+
+    it('should throw an error when anything but an object is passed in as an argument.', function () {
+      expect(function () {
+        stateMixin.addState([]);
+      }).toThrow(new Error('Invariant Violation: This function requires an object as an argument.'));
+
+      expect(function () {
+        stateMixin.addState(88);
+      }).toThrow(new Error('Invariant Violation: This function requires an object as an argument.'));
+
+      expect(function () {
+        stateMixin.addState('someString');
+      }).toThrow(new Error('Invariant Violation: This function requires an object as an argument.'));
+    });
+
+    it('should throw an error if the deepest keys are not numbers or strings when invoking addState.', function () {
+      expect(function () {
+        var propsToAdd = {
+          'Pat':{
+            'cat':{
+              'age':[]
+            }
+          },
+          'Dmitri':{
+            'cat': {
+              'name':'-Gunnari'
+            }
+          }
+        };
+        stateMixin.addState(propsToAdd, callback);
+      }).toThrow(new Error('Invariant Violation: Cannot perform operation on "" because it is not of type number or of type string.'));
+
+      expect(function () {
+        var propsToAdd = {
+          'Pat':{
+            'cat':{
+              'age':{}
+            }
+          },
+          'Dmitri':{
+            'cat': {
+              'name':'-Gunnari'
+            }
+          }
+        };
+        stateMixin.addState(propsToAdd, callback);
+      }).toThrow(new Error('Invariant Violation: Cannot perform operation on "[object Object]" because it is not of type number or of type string.'));
+    });
+
+    it('should throw an error if the deepest keys are not numbers when invoking subtractState, multiplyState, or divideState.', function () {
+      expect(function () {
+        var propsToSubtract = {
+          'Pat':{
+            'cat':{
+              'age':'string'
+            },
+            'dog':{
+              'age':7
+            }
+          },
+          'Dmitri':{
+            'cat': {
+              'age':2
+            }
+          }
+        };
+        stateMixin.subtractState(propsToSubtract, callback);
+      }).toThrow(new Error('Invariant Violation: Cannot perform operation on "string" because it is not of type number.'));
+    });
+  });
 });
