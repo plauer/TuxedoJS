@@ -3,6 +3,7 @@
 var assign = require('object-assign');
 var invariant = require('tux/src/TuxInvariant');
 
+
 var buildNewState = function (currentState, newProps, callback) {
   var newState = assign({}, currentState);
   var keyChain = [];
@@ -303,7 +304,7 @@ var stateConvenienceMethods = {
   },
 
   resetState : function (callback) {
-    var newState = assign({}, this.getIntialState());
+    var newState = assign({}, this.getInitialState());
     this.replaceState(newState, callback);
   }
 };

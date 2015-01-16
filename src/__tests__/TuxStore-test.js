@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 jest.dontMock('tux/src/TuxStore');
-=======
- jest.dontMock('../TuxStore');
->>>>>>> wip
 
 describe('TuxStore', function () {
   var TuxStore, methods, newStore, emitChange, callbackFunc, CHANGE_EVENT, NEW_CHANGE_EVENT;
