@@ -1,24 +1,7 @@
 'use strict';
 
 var assign = require('object-assign');
-var invariant = require('./TuxInvariant');
-var update = require('../React/update');
-
-// var assign = function(obj, extendObj){
-//   for (var key in extendObj) {
-//     if (extendObj.hasOwnProperty(key)) {
-//       obj[key] = extendObj[key];
-//     }
-//   }
-//   return obj;
-// }
-
-/*
-callback = function(newSt, key, stAtKey, valAtKey) {
-  newSt[key] = valAtKey * stAtKey
-  delete newSt[key];
-};
-*/
+var invariant = require('tux/src/TuxInvariant');
 
 var buildNewState = function (currentState, newProps, callback) {
   var newState = assign({}, currentState);
@@ -43,87 +26,17 @@ var buildNewState = function (currentState, newProps, callback) {
   return newState;
 };
 
-
-////////////////////////
-
-
-
-
-//only assign on the key that is being operated on ...
-//wherever you modify keys, make sure you assign
-var findDeepKeysAndApply = function (currentState, newProps, callback) {
-  var newState = assign({}, currentState);
-  // var newObject = JSON.stringify(currentState);
-  // var newObject = JSON.parse(newObject);
-  console.log(currentState)
-  var traverseProps = function (inputProps, keys) {
-    keys = keys ? keys : [];
-    var keyChain;
-
-    for (var key in inputProps) {
-
-      var keyChain = currentState;
-      var newState = newProps;
-
-      //KEEPS TRACK OF NESTED KEYS IN THE NEW PROPS ... KEYS IS AN ARRAY HOLDING EACH NESTED KEY THAT GETS YOU TO THE CURRENT PATH
-      if (keys.length) {
-        for (var i = 0; i < keys.length; i++) {
-          // keyChain = keyChain[keys[i]];
-          // newState = newState[keys[i]];
-          keyChain = assign({}, keyChain[keys[i]]);
-          newState = assign({}, newState[keys[i]]);
-        }
-      }
-
-      //IF ANY OF HTE KEYS IN NEW PROPS DONT MATCH UP WITH CURRENT PROPS, ERROR
-      invariant(keyChain.hasOwnProperty(key), 'The "%s" property is not defined in the current state.', key);
-
-      //IF THERE IS A NESTED OBJECT, RECURSE BACK WITH THAT OBJECT
-      if (Object.prototype.toString.call(inputProps[key]) === "[object Object]") {
-        //PUSH THE CURRENT KEY TO THE KEYS ARRAY TO MAINTAIN THE PATH
-        keys.push(key);
-        traverseProps(inputProps[key], keys);
-        keys.pop();
-      } else {
-        // IF THERE ARE NO MORE NESTED KEYS IN NEW PROPS, WE'VE FOUND THE DEEPEST KEY, SO RUN CALLBACK ON IT
-
-        keyChain = callback(newState, keyChain, key);
-        console.log(keyChain)
-      }
-    }
-  };
-
-  traverseProps(newProps);
-
-
-
-  return currentState;
-};
-
-var hasAnyOuterKeysMatching = function (currentState, newProps) {
-  for (var key in newProps) {
-    if (currentState[key]) {
-      return true;
-    }
-  }
-  invariant(!newProps, "No keys match any keys in the current state.");
-};
-
 var invariantNumberCheck = function (input) {
   if (typeof(input) !== "number") {
     invariant(!input, 'Cannot perform operation on "%s" because it is not of type number.', input);
   };
 };
 
-
-
 var invariantArrayCheck = function (input, message) {
   if (!Array.isArray(input)) {
     invariant(!input, 'Cannot perform operation on "%s" because it is not an array.', input);
   };
 };
-
-
 
 var invariantValueCheck = function (input) {
   if (typeof(input) === "object") {
@@ -133,11 +46,17 @@ var invariantValueCheck = function (input) {
 
 var invariantNumberOrStringCheck = function (input) {
   if (typeof(input) !== "number" && typeof(input) !== "string") {
-    // console.log(typeof(input))
     invariant(!input, 'Cannot perform operation on "%s" because it is not of type number or of type string.', input);
   };
 };
 
+var invariantArgCheck = function (input) {
+  if (!input || typeof(input) !== 'object' || Array.isArray(input)) {
+    invariant(!input, 'This function requires an object as an argument.', input);
+  };
+}
+
+//mixin to that adds convenient methods for updating the state of a component
 var stateConvenienceMethods = {
   state: {
     'Pat': {
@@ -168,56 +87,126 @@ var stateConvenienceMethods = {
     this.state = assign({}, this.state, newState);
   },
 
+  replaceState: function(newState) {
+    this.state = assign({}, newState);
+  },
+
+  //addState FUNCTION: adds the values of the deepest keys in the passed in object to the corresponding deepest keys in the current state, or throws an error if keys don't match
+  //@param propsToAdd OBJECT: required object argument with deepest keys being numbers or strings to add to the current state
+  //@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   addState: function (propsToAdd, callback) {
+    //throw error if propsToAdd is undefined or not an object
+    invariantArgCheck(propsToAdd);
+    //make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    //build new state object
     var newState = buildNewState(currentState, propsToAdd, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //throw error if newPropsAtKey is not a number or string
       invariantNumberOrStringCheck(newPropsAtKey);
+      //perform addition on the corresponding deep keys
       newState[key] = currentStateAtKey + newPropsAtKey;
     });
+    //set state with the updated values and a callback (if provided)
     this.setState(newState, callback);
   },
 
+
+  //subtractState FUNCTION: subtracts the value of the deepest keys in the passed in object to the corresponding deepest keys in the current state, or throws an error if keys don't match
+  //@param propsToAdd OBJECT: required object argument with deepest keys being numbers to subtract the current state from
+  //@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   subtractState: function(propsToSubtract, callback) {
+    //throw error if propsToSubtract is undefined or not an object
+    invariantArgCheck(propsToSubtract);
+    //make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    //build new state object
     var newState = buildNewState(currentState, propsToSubtract, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //throw error if newPropsAtKey is not a number
       invariantNumberCheck(newPropsAtKey);
+      //perform subtraction on the corresponding deep keys
       newState[key] = currentStateAtKey - newPropsAtKey;
     });
+    //set state with the updated values and a callback (if provided)
     this.setState(newState, callback);
   },
 
+  //multiplyState FUNCTION: multiply the value of the deepest keys in the passed in object to the corresponding deepest keys in the current state, or throws an error if keys don't match
+  //@param propsToMultiply OBJECT: required object argument with deepest keys being numbers to multiply the current state by
+  //@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   multiplyState: function (propsToMultiply, callback) {
+    //throw error if propsToMultiply is undefined or not an object
+    invariantArgCheck(propsToMultiply);
+    //make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    //build new state object
     var newState = buildNewState(currentState, propsToMultiply, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //throw error if newPropsAtKey is not a number
       invariantNumberCheck(newPropsAtKey);
+      //perform multiplication on the corresponding deep keys
       newState[key] = currentStateAtKey * newPropsAtKey;
     });
+    //set state with the updated values and a callback (if provided)
     this.setState(newState, callback);
   },
 
+  //divideState FUNCTION: divide the value of the deepest keys in the passed in object by the corresponding deepest keys in the current state, or throws an error if keys don't match
+  //@param propsToDivide OBJECT: required object argument with deepest keys being numbers to divide the current state by
+  //@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   divideState: function (propsToDivide, callback) {
+    //throw error if propsToDivide is undefined or not an object
+    invariantArgCheck(propsToDivide);
+    //make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    //build new state object
     var newState = buildNewState(currentState, propsToDivide, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //throw error if newPropsAtKey is not a number
       invariantNumberCheck(newPropsAtKey);
+      //perform division on the corresponding deep keys
       newState[key] = currentStateAtKey / newPropsAtKey;
     });
+    //set state with the updated values and a callback (if provided)
     this.setState(newState, callback);
   },
 
+  //omitState FUNCTION: removes the deepest keys in the passed in object from the corresponding deepest keys in the current state, or throws an error if keys don't match
+  //@param propsToOmit OBJECT: required object argument with deepest keys being booleans
+  //@param callback FUNCTION: optional callback that will be executed once setState is completed and the component is re-rendered
   omitState: function (propsToOmit, callback) {
+    //throw error if propsToOmit is undefined or not an object
+    invariantArgCheck(propsToOmit);
+    //make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    //build new state object
     var newState = buildNewState(currentState, propsToOmit, function(newState, key, currentStateAtKey, newPropsAtKey) {
+      //remove the deepest key
       delete newState[key];
     });
+    //set state with the updated values and a callback (if provided)
     this.replaceState(newState, callback);
   },
 
+  //extendState FUNCTION: adds new keys from the passed in object to the current state and overrides pre-existing keys, throws error if no outer keys in passed in object match outer keys in current state
+  //@param propsToExtend OBJECT: required object argument with at least one outer key matching an outer key in the current state, and any additional keys being keys to add to the current state
+  //@param callback FUNCTION: optional callback that will be executed once setState is completed and the component is re-rendered
   extendState: function (propsToExtend, callback) {
+    //throw error if propsToExtend is undefined or not an object
+    invariantArgCheck(propsToExtend);
+    //make a shallow copy of the current state
     var currentState = assign({}, this.state);
-    if (hasAnyOuterKeysMatching(currentState, propsToExtend)) {
-      var newState = assign(currentState, propsToExtend);
-      this.setState(newState, callback);
+    var matchedKey = false;
+    //check that at least one outer key in the passed in object matches an outer key in the current state
+    for (var key in propsToExtend) {
+      if (currentState[key]) {
+        //if we find any key that maches a key in the current state, set matchedKey to true
+        matchedKey = true;
+      }
     }
+    //throw error if no keys match any keys in the current state
+    invariant(matchedKey, "At least one outer key must match an outer key in the current state. Use setState if you only wish to add new keys and not change existing keys.");
+    //build new object with all keys in the current state plus any additional keys in propsToExtend, overwriting any matching keys with those in propsToExtend
+    var newState = assign({}, currentState, propsToExtend);
+    //set state with the updated values and a callback (if provided)
+    this.setState(newState, callback);
   },
 
   pushState: function (propsToPush, callback) {
@@ -244,7 +233,7 @@ var stateConvenienceMethods = {
       newState[key] = currentStateAtKey;
     });
     //do we really need to call this since we're mutating the array?
-    this.setState(newState);
+    this.setState(newState, callback);
   },
 
   unshiftState: function(propsToUnshift, callback) {
@@ -314,251 +303,8 @@ var stateConvenienceMethods = {
   },
 
   resetState : function (callback) {
-    var newState = assign({}, this.getIntialState);
+    var newState = assign({}, this.getIntialState());
     this.replaceState(newState, callback);
   }
 };
-
-
-//ADD
-// var propsToAdd = {
-//   'Pat':{
-//     'cat':{
-//       'age':9
-//     }
-//   },
-//   'Dmitri':{
-//     'cat': {
-//       'name':'-Gunnari'
-//     }
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.addState(propsToAdd);
-// console.log(stateConvenienceMethods.state);
-
-
-
-
-
-//SUBTRACT
-// var propsToSubtract = {
-//   'Pat':{
-//     'cat':{
-//       'age':1
-//     },
-//     'dog':{
-//       'age':1
-//     }
-//   },
-//   'Dmitri':{
-//     'cat': {
-//       'age':2
-//     }
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.subtractState(propsToSubtract);
-// console.log(stateConvenienceMethods.state);
-
-
-
-
-
-
-//MULTIPLY
-// var propsToMultiply = {
-//   'Pat':{
-//     'cat':{
-//       'age':2
-//     },
-//     'dog':{
-//       'age':3
-//     }
-//   },
-//   'Dmitri':{
-//     'cat': {
-//       'age':2
-//     }
-//   }
-// };
-
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.multiplyState(propsToMultiply);
-// console.log(stateConvenienceMethods.state);
-
-
-
-
-
-//DIVIDE
-// var propsToDivide = {
-//   'Pat':{
-//     'cat':{
-//       'age':2
-//     },
-//     'dog':{
-//       'age':30
-//     }
-//   },
-//   'Dmitri':{
-//     'cat': {
-//       'age':2
-//     }
-//   }
-// };
-
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.divideState(propsToDivide);
-// console.log(stateConvenienceMethods.state);
-
-// OMIT
-// var deleteProps = {
-//   'Pat':{
-//     'pigeon':true,
-//     'cat':true,
-//     'dog':{
-//       'age':true
-//     }
-//   },
-//   'Dmitri':true
-// };
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.omitState(deleteProps);
-
-// // EXTEND
-// var extendProps = {
-//   'Dmitri':{
-//     'birds':true
-//   },
-//   'Spencer':true
-// };
-
-
-// console.log(stateConvenienceMethods.state);
-// console.log('');
-// stateConvenienceMethods.extendState(extendProps);
-// console.log(stateConvenienceMethods.state);
-
-
-
-
-//PUSH ...
-// var propsToPush = {
-//   'Gunnari': {
-//     'turtles':'Snuggles'
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.pushState(propsToPush);
-// console.log(stateConvenienceMethods.state);
-
-
-
-//POP
-// var propsToPop = {
-//   'Gunnari': {
-//     'turtles':true
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.popState(propsToPop);
-// console.log(stateConvenienceMethods.state);
-
-//UNSHIFT
-// var propsToUnshift = {
-//   'Gunnari': {
-//     'turtles':'Snuggles'
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.unshiftState(propsToUnshift);
-// console.log(stateConvenienceMethods.state);
-
-
-//SHIFT
-// var propsToShift = {
-//   'Gunnari': {
-//     'turtles':true
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.shiftState(propsToShift);
-// console.log(stateConvenienceMethods.state);
-
-
-
-
-
-
-//SPLICE
-// var propsToSplice = {
-//   'Gunnari': {
-//     'turtles':[1, 1, 'Wilbert', 'Jane', 'Mufasa']
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.spliceState(propsToSplice);
-// console.log('');
-// console.log(stateConvenienceMethods.state);
-
-//CONCAT TO END
-// var propsToConcat = {
-//   'Gunnari': {
-//     'turtles':['Wilbert', 'Jane', 'Mufasa']
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.concatToEndOfState(propsToConcat);
-// console.log(stateConvenienceMethods.state);
-
-
-//CONCAT TO FRONT
-var propsToConcat = {
-  'Gunnari': {
-    'turtles':['Wilbert', 'Jane', 'Mufasa']
-  }
-};
-
-console.log(stateConvenienceMethods.state);
-stateConvenienceMethods.concatToFrontOfState(propsToConcat);
-console.log(stateConvenienceMethods.state);
-
-
-
-
-
-
-
-
-//SPLICE ... how are args passed in?
-// var propsToSplice = {
-//   'Gunnari': {
-//     'turtles':true
-//   }
-// };
-
-// console.log(stateConvenienceMethods.state);
-// stateConvenienceMethods.shiftState(propsToShift);
-
-
-
-
-
-
-
-
-
-
-
-
+module.exports = stateConvenienceMethods;
