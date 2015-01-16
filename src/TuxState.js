@@ -3,7 +3,7 @@
 var assign = require('object-assign');
 var invariant = require('tux/src/TuxInvariant');
 
-// buildNewState FUNCTION: creates an updated state object by invoking callback on the deepest keys of the newProps object, throwing an error if any of the keys in newProps dont match the corresponding keys in currentState
+// buildNewState FUNCTION: internal function that creates an updated state object by invoking callback on the deepest keys of the newProps object, throwing an error if any of the keys in newProps dont match the corresponding keys in currentState
 // @param currentState OBJECT: a shallow copy of this.state
 // @param newProps OBJECT: an object holding keys that should match those in currentState and whose values will each be passed to callback
 // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
@@ -11,6 +11,7 @@ var buildNewState = function (currentState, newProps, callback) {
   // create a shallow copy of the currentstate
   var newState = assign({}, currentState);
 
+  // TODO: Waiting to add more comments because I assume we're refactoring this inner recursive function
   // recurseKeys FUNCTION: traverses through keys in a heavily nested object
   // @param currentST
   // @param newST
@@ -34,7 +35,7 @@ var buildNewState = function (currentState, newProps, callback) {
   return newState;
 };
 
-// invariantNumberCheck FUNCTION: ensures a given value is a number or throws an error
+// invariantNumberCheck FUNCTION: internal function that ensures a given value is a number or throws an error
 // @param input UNKNOWN: value we are performing invariant check upon
 var invariantNumberCheck = function (input) {
   if (typeof(input) !== "number") {
@@ -42,7 +43,7 @@ var invariantNumberCheck = function (input) {
   };
 };
 
-// invariantArrayCheck FUNCTION: ensures a given value is an array or throws an error
+// invariantArrayCheck FUNCTION: internal function that ensures a given value is an array or throws an error
 // @param input UNKNOWN: value we are performing invariant check upon
 var invariantArrayCheck = function (input) {
   if (!Array.isArray(input)) {
@@ -50,7 +51,7 @@ var invariantArrayCheck = function (input) {
   };
 };
 
-// invariantValueCheck FUNCTION: ensures a given value is not stored in an array or an object
+// invariantValueCheck FUNCTION: internal function that ensures a given value is not stored in an array or an object
 // @param input UNKNOWN: value we are performing invariant check upon
 var invariantValueCheck = function (input) {
   if (typeof(input) === "object") {
@@ -58,7 +59,7 @@ var invariantValueCheck = function (input) {
   }
 };
 
-// invariantNumberOrStringCheck FUNCTION: ensures a given value is a number or string or throws an error
+// invariantNumberOrStringCheck FUNCTION: internal function that ensures a given value is a number or string or throws an error
 // @param input UNKNOWN: value we are performing invariant check upon
 var invariantNumberOrStringCheck = function (input) {
   if (typeof(input) !== "number" && typeof(input) !== "string") {
@@ -66,7 +67,7 @@ var invariantNumberOrStringCheck = function (input) {
   };
 };
 
-// invariantNumberCheck FUNCTION: ensures a given value is defined and is an object or throws an error
+// invariantNumberCheck FUNCTION: internal function that ensures a given value is defined and is an object or throws an error
 // @param input UNKNOWN: value we are performing invariant check upon
 var invariantArgCheck = function (input) {
   if (!input) {
@@ -76,121 +77,87 @@ var invariantArgCheck = function (input) {
   }
 };
 
-
+// mixin to React class that will provide convenience methods for updating state
 module.exports = {
-  state: {
-    'Pat': {
-      'cat': {
-        'name':'Mr. Bigglesworth',
-        'age':10
-      },
-      'dog':{
-        'age':10
-      },
-      'squirrel':true,
-      'pigeon':{
-        'fat':true
-      }
-    },
-    'Dmitri': {
-      'cat':{
-        'age': 12,
-        'name':'Spencer'
-      }
-    },
-    'Gunnari': {
-      'turtles':['Pat', 'Spencer']
-    }
-  },
-
-  setState: function(newState) {
-    this.state = assign({}, this.state, newState);
-  },
-
-  replaceState: function(newState) {
-    this.state = assign({}, newState);
-  },
-
-  //addState FUNCTION: adds the values of the deepest keys in the passed in object to the corresponding deepest keys in the current state, or throws an error if keys don't match
-  //@param propsToAdd OBJECT: required object argument with deepest keys being numbers or strings to add to the current state
-  //@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
+  // addState FUNCTION: adds the values of the deepest keys in the passed in object to the corresponding deepest keys in the current state, or throws an error if keys don't match
+  // @param propsToAdd OBJECT: required object argument where the deepest keys are numbers or strings
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   addState: function (propsToAdd, callback) {
-    //throw error if propsToAdd is undefined or not an object
+    // throw error if propsToAdd is undefined or not an object
     invariantArgCheck(propsToAdd);
-    //make a shallow copy of the current state
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
-    //build new state object
+    // build new state object
     var newState = buildNewState(currentState, propsToAdd, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //throw error if newPropsAtKey is not a number or string
+      // throw error if newPropsAtKey is not a number or string
       invariantNumberOrStringCheck(newPropsAtKey);
-      //perform addition on the corresponding deep keys
+      // perform addition on the corresponding deep keys
       newState[key] = currentStateAtKey + newPropsAtKey;
     });
-    //set state with the updated values and a callback (if provided)
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
-
-  //subtractState FUNCTION: subtracts the value of the deepest keys in the passed in object to the corresponding deepest keys in the current state, or throws an error if keys don't match
-  //@param propsToAdd OBJECT: required object argument with deepest keys being numbers to subtract the current state from
-  //@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
+  // subtractState FUNCTION: subtracts the values of the deepest keys in the passed in object from the corresponding deepest keys in the current state, or throws an error if keys don't match
+  // @param propsToSubtract OBJECT: required object argument where the deepest keys are numbers
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   subtractState: function(propsToSubtract, callback) {
-    //throw error if propsToSubtract is undefined or not an object
+    // throw error if propsToSubtract is undefined or not an object
     invariantArgCheck(propsToSubtract);
-    //make a shallow copy of the current state
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
-    //build new state object
+    // build new state object
     var newState = buildNewState(currentState, propsToSubtract, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //throw error if newPropsAtKey is not a number
+      // throw error if newPropsAtKey is not a number
       invariantNumberCheck(newPropsAtKey);
-      //perform subtraction on the corresponding deep keys
+      // perform subtraction on the corresponding deep keys
       newState[key] = currentStateAtKey - newPropsAtKey;
     });
-    //set state with the updated values and a callback (if provided)
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
-  //multiplyState FUNCTION: multiply the value of the deepest keys in the passed in object to the corresponding deepest keys in the current state, or throws an error if keys don't match
-  //@param propsToMultiply OBJECT: required object argument with deepest keys being numbers to multiply the current state by
-  //@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
+  // multiplyState FUNCTION: multiply the values of the deepest keys in the passed in object by the corresponding deepest keys in the current state, or throws an error if keys don't match
+  // @param propsToMultiply OBJECT: required object argument where the deepest keys are numbers
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   multiplyState: function (propsToMultiply, callback) {
-    //throw error if propsToMultiply is undefined or not an object
+    // throw error if propsToMultiply is undefined or not an object
     invariantArgCheck(propsToMultiply);
-    //make a shallow copy of the current state
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
-    //build new state object
+    // build new state object
     var newState = buildNewState(currentState, propsToMultiply, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //throw error if newPropsAtKey is not a number
+      // throw error if newPropsAtKey is not a number
       invariantNumberCheck(newPropsAtKey);
-      //perform multiplication on the corresponding deep keys
+      // perform multiplication on the corresponding deep keys
       newState[key] = currentStateAtKey * newPropsAtKey;
     });
-    //set state with the updated values and a callback (if provided)
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
-  //divideState FUNCTION: divide the value of the deepest keys in the passed in object by the corresponding deepest keys in the current state, or throws an error if keys don't match
-  //@param propsToDivide OBJECT: required object argument with deepest keys being numbers to divide the current state by
-  //@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
+  // divideState FUNCTION: divide the values of the deepest keys in the current state by the values of corresponding deepest keys in the passed in object, or throws an error if keys don't match
+  // @param propsToDivide OBJECT: required object argument where the deepest keys are numbers
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   divideState: function (propsToDivide, callback) {
-    //throw error if propsToDivide is undefined or not an object
+    // throw error if propsToDivide is undefined or not an object
     invariantArgCheck(propsToDivide);
-    //make a shallow copy of the current state
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
-    //build new state object
+    // build new state object
     var newState = buildNewState(currentState, propsToDivide, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //throw error if newPropsAtKey is not a number
+      // throw error if newPropsAtKey is not a number
       invariantNumberCheck(newPropsAtKey);
-      //perform division on the corresponding deep keys
+      // perform division on the corresponding deep keys
       newState[key] = currentStateAtKey / newPropsAtKey;
     });
-    //set state with the updated values and a callback (if provided)
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
-  //omitState FUNCTION: removes the deepest keys in the passed in object from the corresponding deepest keys in the current state, or throws an error if keys don't match
-  //@param propsToOmit OBJECT: required object argument with deepest keys being booleans
-  //@param callback FUNCTION: optional callback that will be executed once setState is completed and the component is re-rendered
+  // omitState FUNCTION: removes the deepest keys in the passed in object from the corresponding deepest keys in the current state, or throws an error if keys don't match
+  // @param propsToOmit OBJECT: required object argument where the deepest keys are booleans
+  // @param callback FUNCTION: optional callback that will be executed once setState is completed and the component is re-rendered
   omitState: function (propsToOmit, callback) {
     //throw error if propsToOmit is undefined or not an object
     invariantArgCheck(propsToOmit);
@@ -198,34 +165,37 @@ module.exports = {
     var currentState = assign({}, this.state);
     //build new state object
     var newState = buildNewState(currentState, propsToOmit, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //remove the deepest key
-      delete newState[key];
+      //check that newPropsAtKey is true
+      if (newPropsAtKey === true) {
+        //remove the deepest key
+        delete newState[key];
+      }
     });
-    //set state with the updated values and a callback (if provided)
+    // update state with new values and pass callback (if provided), triggering re-render
     this.replaceState(newState, callback);
   },
 
-  //extendState FUNCTION: adds new keys from the passed in object to the current state and overrides pre-existing keys, throws error if no outer keys in passed in object match outer keys in current state
-  //@param propsToExtend OBJECT: required object argument with at least one outer key matching an outer key in the current state, and any additional keys being keys to add to the current state
-  //@param callback FUNCTION: optional callback that will be executed once setState is completed and the component is re-rendered
+  // extendState FUNCTION: overrides pre-existing keys and adds any new keys from the passed in object to the current state, or throws error if no outer keys in passed in object match any outer keys in the current state
+  // @param propsToExtend OBJECT: required object argument with at least one outer key matching an outer key in the current state, and any additional keys being keys to add to the current state
+  // @param callback FUNCTION: optional callback that will be executed once setState is completed and the component is re-rendered
   extendState: function (propsToExtend, callback) {
-    //throw error if propsToExtend is undefined or not an object
+    // throw error if propsToExtend is undefined or not an object
     invariantArgCheck(propsToExtend);
-    //make a shallow copy of the current state
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
     var matchedKey = false;
-    //check that at least one outer key in the passed in object matches an outer key in the current state
+    // check that at least one outer key in the passed in object matches an outer key in the current state
     for (var key in propsToExtend) {
       if (currentState[key]) {
         //if we find any key that maches a key in the current state, set matchedKey to true
         matchedKey = true;
       }
     }
-    //throw error if no keys match any keys in the current state
+    // throw error if no outer keys match any outer keys in the current state
     invariant(matchedKey, "At least one outer key must match an outer key in the current state. Use setState if you only wish to add new keys and not change existing keys.");
-    //build new object with all keys in the current state plus any additional keys in propsToExtend, overwriting any matching keys with those in propsToExtend
+    // build new object with all keys in the current state plus any additional keys in propsToExtend, overriding any matching keys with those in propsToExtend
     var newState = assign({}, currentState, propsToExtend);
-    //set state with the updated values and a callback (if provided)
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
@@ -239,7 +209,7 @@ module.exports = {
       currentStateAtKey.push(newPropsAtKey);
       newState[key] = currentStateAtKey;
     });
-    //do we really need to call this since we're mutating the current state already?
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
@@ -252,7 +222,7 @@ module.exports = {
       currentStateAtKey.pop();
       newState[key] = currentStateAtKey;
     });
-    //do we really need to call this since we're mutating the array?
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
@@ -266,7 +236,7 @@ module.exports = {
       currentStateAtKey.unshift(newPropsAtKey);
       newState[key] = currentStateAtKey;
     });
-    //do we really need to call this since we're mutating the array?
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
@@ -278,7 +248,7 @@ module.exports = {
       currentStateAtKey.shift();
       newState[key] = currentStateAtKey;
     });
-    //do we really need to call this since we're mutating the array?
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
@@ -292,7 +262,7 @@ module.exports = {
       Array.prototype.splice.apply(currentStateAtKey, newPropsAtKey);
       newState[key] = currentStateAtKey;
     });
-    //do we really need to call this since we're mutating the array?
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
@@ -306,6 +276,7 @@ module.exports = {
       //set the newState at this key to be the concatted result
       newState[key] = currentStateAtKey.concat(newPropsAtKey);
     });
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
@@ -319,11 +290,13 @@ module.exports = {
       //set the newState at this key to be the concatted result
       newState[key] = newPropsAtKey.concat(currentStateAtKey);
     });
+    // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
   resetState : function (callback) {
     var newState = assign({}, this.getInitialState());
+    // update state with new values and pass callback (if provided), triggering re-render
     this.replaceState(newState, callback);
   }
 };
