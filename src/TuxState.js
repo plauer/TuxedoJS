@@ -67,7 +67,7 @@ var invariantNumberOrStringCheck = function (input) {
   };
 };
 
-// invariantNumberCheck FUNCTION: internal function that ensures a given value is defined and is an object or throws an error
+// invariantArgCheck FUNCTION: internal function that ensures a given value is defined and is an object or throws an error
 // @param input UNKNOWN: value we are performing invariant check upon
 var invariantArgCheck = function (input) {
   if (!input) {
@@ -199,13 +199,21 @@ module.exports = {
     this.setState(newState, callback);
   },
 
+  // pushState FUNCTION: push the values at the deepest keys in the passed in object to the arrays at the corresponding deepest keys of the current state, or throws an error if keys don't match
+  // @param propsToPush OBJECT: required object argument where the deepest keys are single values
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   pushState: function (propsToPush, callback) {
+    // throw error if propsToPush is undefined or not an object
+    invariantArgCheck(propsToPush);
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    // build new state object
     var newState = buildNewState(currentState, propsToPush, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //check that current state at this key is an array
+      // check that currentStateAtKey key is an array
       invariantArrayCheck(currentStateAtKey);
-      //check that there is only one value being pushed in
+      // check that there is only one value being pushed in
       invariantValueCheck(newPropsAtKey);
+      // push newPropsAtKey into the corresponding key in the current state
       currentStateAtKey.push(newPropsAtKey);
       newState[key] = currentStateAtKey;
     });
@@ -213,26 +221,44 @@ module.exports = {
     this.setState(newState, callback);
   },
 
+  // popState FUNCTION: match the values at the deepest keys in the passed in object and pop values off the arrays at the corresponding deepest keys of the current state, or throws an error if keys don't match
+  // @param propsToPop OBJECT: required object argument where the deepest keys are booleans
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   popState: function (propsToPop, callback) {
+    // throw error if propsToPop is undefined or not an object
+    invariantArgCheck(propsToPop);
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    // build new state object
     var newState = buildNewState(currentState, propsToPop, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //check that current state at this key is an array
+      // check that currentStateAtKey key is an array
       invariantArrayCheck(currentStateAtKey);
-
-      currentStateAtKey.pop();
-      newState[key] = currentStateAtKey;
+      // check that newPropsAtKey is true
+      if (newPropsAtKey === true) {
+        // pop a value off the corresponding key in the current state
+        currentStateAtKey.pop();
+        newState[key] = currentStateAtKey;
+      }
     });
     // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
+  // unshiftState FUNCTION: unshift the values at the deepest keys in the passed in object to the arrays at the corresponding deepest keys of the current state, or throws an error if keys don't match
+  // @param propsToUnshift OBJECT: required object argument where the deepest keys are single values
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   unshiftState: function(propsToUnshift, callback) {
+    // throw error if propsToUnshift is undefined or not an object
+    invariantArgCheck(propsToUnshift);
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    // build new state object
     var newState = buildNewState(currentState, propsToUnshift, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //check that current state at this key is an array
+      // check that currentStateAtKey key is an array
       invariantArrayCheck(currentStateAtKey);
-      //check that there is only one value being pushed in
+      // check that there is only one value being pushed in
       invariantValueCheck(newPropsAtKey);
+      // unshift newPropsAtKey into the corresponding key in the current state
       currentStateAtKey.unshift(newPropsAtKey);
       newState[key] = currentStateAtKey;
     });
@@ -240,25 +266,42 @@ module.exports = {
     this.setState(newState, callback);
   },
 
+  // shiftState FUNCTION: match the values at the deepest keys in the passed in object and shift values off the arrays at the corresponding deepest keys of the current state, or throws an error if keys don't match
+  // @param propsToShift OBJECT: required object argument where the deepest keys are booleans
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   shiftState: function(propsToShift, callback) {
+    // throw error if propsToShift is undefined or not an object
+    invariantArgCheck(propsTShift);
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    // build new state object
     var newState = buildNewState(currentState, propsToShift, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //check that current state at this key is an array
+      // check that currentStateAtKey key is an array
       invariantArrayCheck(currentStateAtKey);
-      currentStateAtKey.shift();
-      newState[key] = currentStateAtKey;
+      // check that newPropsAtKey is true
+      if (newPropsAtKey === true) {
+        // shift a value off the corresponding key in the current state
+        currentStateAtKey.shift();
+        newState[key] = currentStateAtKey;
+      }
     });
     // update state with new values and pass callback (if provided), triggering re-render
     this.setState(newState, callback);
   },
 
+  // spliceState FUNCTION: invoke splice using the values at the deepest keys in the passed in object on the arrays at the corresponding deepest keys of the current state, or throws an error if keys don't match
+  // @param propsToSplice OBJECT: required object argument where the deepest keys are an array of arguments with which to invoke splice
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   spliceState: function(propsToSplice, callback) {
+    // throw error if propsToSplice is undefined or not an object
+    invariantArgCheck(propsToSplice);
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    // build new state object
     var newState = buildNewState(currentState, propsToSplice, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //check that current state at this key is an array
+      // check that currentStateAtKey key is an array
       invariantArrayCheck(currentStateAtKey);
-
-      //Should probably check that first 2 indexes of newPropsAtKey are integers? or should we let native javasciprt error handle that?
+      // invoke splice on currentStateAtKey with the array of arguments at newPropsAtKey
       Array.prototype.splice.apply(currentStateAtKey, newPropsAtKey);
       newState[key] = currentStateAtKey;
     });
@@ -266,12 +309,19 @@ module.exports = {
     this.setState(newState, callback);
   },
 
+  // concatToEndOfState FUNCTION: concat the values at the deepest keys in the passed in object to the end of the arrays at the corresponding deepest keys of the current state, or throws an error if keys don't match
+  // @param propsToConcat OBJECT: required object argument where the deepest keys are an array of values
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   concatToEndOfState: function(propsToConcat, callback) {
+    // throw error if propsToConcat is undefined or not an object
+    invariantArgCheck(propsToConcat);
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    // build new state object
     var newState = buildNewState(currentState, propsToConcat, function(newState, key, currentStateAtKey, newPropsAtKey) {
-      //check that currentStateAtKey is an array
+      //check that the currentStateAtKey is an array
       invariantArrayCheck(currentStateAtKey);
-      //check that newProps at this key is an array
+      //check that  newProps at this key is an array
       invariantArrayCheck(newPropsAtKey);
       //set the newState at this key to be the concatted result
       newState[key] = currentStateAtKey.concat(newPropsAtKey);
@@ -280,8 +330,15 @@ module.exports = {
     this.setState(newState, callback);
   },
 
+  // concatToFrontOfState FUNCTION: concat the values at the deepest keys in the passed in object to the front of the arrays at the corresponding deepest keys of the current state, or throws an error if keys don't match
+  // @param propsToConcat OBJECT: required object argument where the deepest keys are an array of values
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   concatToFrontOfState: function(propsToConcat, callback) {
+    // throw error if propsToConcat is undefined or not an object
+    invariantArgCheck(propsToConcat);
+    // make a shallow copy of the current state
     var currentState = assign({}, this.state);
+    // build new state object
     var newState = buildNewState(currentState, propsToConcat, function(newState, key, currentStateAtKey, newPropsAtKey) {
       //check that currentStateAtKey is an array
       invariantArrayCheck(currentStateAtKey);
@@ -294,7 +351,10 @@ module.exports = {
     this.setState(newState, callback);
   },
 
+  // resetState FUNCTION: resets the state to be the result of calling this.getInitialState()
+  // @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
   resetState : function (callback) {
+    // make a shallow copy of the return value from getInitialState()
     var newState = assign({}, this.getInitialState());
     // update state with new values and pass callback (if provided), triggering re-render
     this.replaceState(newState, callback);
