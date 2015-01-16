@@ -3,13 +3,18 @@
 var assign = require('object-assign');
 var invariant = require('tux/src/TuxInvariant');
 
-//buildNewState FUNCTION:
-//@param currentState OBJECT: required object argument with deepest keys being numbers or strings to add to the current state
-//@param newProps FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
-//@param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
+// buildNewState FUNCTION: creates an updated state object by invoking callback on the deepest keys of the newProps object, throwing an error if any of the keys in newProps dont match the corresponding keys in currentState
+// @param currentState OBJECT: a shallow copy of this.state
+// @param newProps OBJECT: an object holding keys that should match those in currentState and whose values will each be passed to callback
+// @param callback FUNCTION: optional callback argument that will be executed once setState is completed and the component is re-rendered
 var buildNewState = function (currentState, newProps, callback) {
+  // create a shallow copy of the currentstate
   var newState = assign({}, currentState);
-  var keyChain = [];
+
+  // recurseKeys FUNCTION: traverses through keys in a heavily nested object
+  // @param currentST
+  // @param newST
+  // @param newPR
   var recurseKeys = function (currentSt, newSt, newPr) {
     for (var key in newPr) {
       if (newPr.hasOwnProperty(key)) {
@@ -29,30 +34,40 @@ var buildNewState = function (currentState, newProps, callback) {
   return newState;
 };
 
+// invariantNumberCheck FUNCTION: ensures a given value is a number or throws an error
+// @param input UNKNOWN: value we are performing invariant check upon
 var invariantNumberCheck = function (input) {
   if (typeof(input) !== "number") {
     invariant(!input, 'Cannot perform operation on "%s" because it is not of type number.', input);
   };
 };
 
-var invariantArrayCheck = function (input, message) {
+// invariantArrayCheck FUNCTION: ensures a given value is an array or throws an error
+// @param input UNKNOWN: value we are performing invariant check upon
+var invariantArrayCheck = function (input) {
   if (!Array.isArray(input)) {
     invariant(!input, 'Cannot perform operation on "%s" because it is not an array.', input);
   };
 };
 
+// invariantValueCheck FUNCTION: ensures a given value is not stored in an array or an object
+// @param input UNKNOWN: value we are performing invariant check upon
 var invariantValueCheck = function (input) {
   if (typeof(input) === "object") {
     invariant(!input, 'Cannot perform operation on "%s" because it must not be an array or object.', input);
   }
-}
+};
 
+// invariantNumberOrStringCheck FUNCTION: ensures a given value is a number or string or throws an error
+// @param input UNKNOWN: value we are performing invariant check upon
 var invariantNumberOrStringCheck = function (input) {
   if (typeof(input) !== "number" && typeof(input) !== "string") {
     invariant(!input, 'Cannot perform operation on "%s" because it is not of type number or of type string.', input);
   };
 };
 
+// invariantNumberCheck FUNCTION: ensures a given value is defined and is an object or throws an error
+// @param input UNKNOWN: value we are performing invariant check upon
 var invariantArgCheck = function (input) {
   if (!input) {
     invariant(input, 'This function requires an object as an argument.');
@@ -61,8 +76,8 @@ var invariantArgCheck = function (input) {
   }
 };
 
-//mixin to that adds convenient methods for updating the state of a component
-var stateConvenienceMethods = {
+
+module.exports = {
   state: {
     'Pat': {
       'cat': {
@@ -312,7 +327,3 @@ var stateConvenienceMethods = {
     this.replaceState(newState, callback);
   }
 };
-
-module.exports = stateConvenienceMethods;
-
-// console.log(stateConvenienceMethods.addState({}));
